@@ -116,8 +116,12 @@
     <code>SS[count][class][line]</code><br>e.g. <code>SS1Y2</code>
 
     <h3>PNR elements</h3>
-    <code>NM1SURNAME/FIRST MR</code><br>
+    <code>NM1SURNAME/FIRST MR</code> (repeat for each passenger)<br>
+    <code>NM1SURNAME/FIRST MSTR(CHD/DDMMMYY)</code><br>
+    <code>NM1SURNAME/FIRST MS(INF ISURNAME/IFIRST MISS/DDMMMYY)</code><br>
     <code>AP [contact text]</code><br>
+    <code>SRCTCE [AL] HK1-[email]/P[n]</code><br>
+    <code>SRCTCM [AL] HK1-[phone]/P[n]</code><br>
     <code>TKTL</code> / <code>TKOK</code><br>
     <code>RF[code];ER</code>
 
@@ -133,7 +137,8 @@
     Generic practice data: DACJED · DACRUH · DACMED · DACBKK · DACIST · DACLHR · DACDEL · DACBOM · DACKTM · DACHKG · DACCAN · DACPEK · DACAUH · DACBAH · DACKWI · DACSHJ · DACMLE · DACCDG · DACMAN
 
     <h3>Note</h3>
-    This is an early prototype. Screen formatting is a close approximation, not a pixel-exact copy — command syntax, status codes (DK→HK) and error behavior are the verified parts so far.
+    This is an early prototype. Screen formatting is a close approximation, not a pixel-exact copy — command syntax, status codes (DK→HK) and error behavior are the verified parts so far.<br><br>
+    Typing is auto-capitalised (no Shift/Caps Lock needed). Press <b>Alt+↑</b> / <b>Alt+↓</b> to recall previous/next commands, like Sabre.
   </div>
 </div>
 
@@ -222,7 +227,8 @@ GENERIC_DEST.forEach(d=>{
 let state = {
   lastRoute:null,
   segments:[],      // {al,fn,cls,count,dep,arr,depT,arrT,dur,eq,date,status}
-  name:null,
+  passengers:[],    // {type:'adult'|'child'|'infantCarrier', label, dob, infant:{surname,first,title,dob}}
+  contactSSRs:[],   // raw SRCTCE/SRCTCM lines as typed
   phone:null,
   received:null,
   ticketing:null,
@@ -269,23 +275,46 @@ function renderPNR(header){
   const rows = [];
   if(header) rows.push(header);
   let idx = 1;
-  if(state.name){
-    rows.push(`<span class="name">${idx}</span>.<span class="name">${esc(state.name)}</span>`);
+  const paxLineOf = {}; // passengerArrayIndex -> line number, for SSR references
+  state.passengers.forEach((p, pi)=>{
+    rows.push(`<span class="name">${idx}</span>.<span class="name">${esc(p.label)}</span>`);
+    paxLineOf[pi] = idx;
     idx++;
-  }
+  });
   state.segments.forEach(seg=>{
     rows.push(fmtSeg(idx, seg, seg.status)); idx++;
   });
   if(state.phone){ rows.push(`${idx}  AP ${esc(state.phone)}`); idx++; }
   if(state.ticketing){ rows.push(`${idx}  TK ${esc(state.ticketing)}`); idx++; }
+  state.contactSSRs.forEach(c=>{
+    rows.push(`${idx}  ${esc(c)}`); idx++;
+  });
+  // Auto SSR CHLD / INFT lines — generated from current passengers + segments,
+  // matching the pattern seen on real screens (one CHLD line per child, one
+  // INFT line per flight segment for each infant-carrying adult).
+  const al = dominantAirline();
+  state.passengers.forEach((p, pi)=>{
+    if(p.type === 'child'){
+      rows.push(`${idx}  SSR CHLD ${al} HK1 ${p.dob}/P${pi+1}`); idx++;
+    }
+    if(p.type === 'infantCarrier' && state.segments.length){
+      state.segments.forEach((seg, si)=>{
+        rows.push(`${idx}  SSR INFT ${al} NN1 ${p.infant.surname}/${p.infant.first}${p.infant.title}  ${p.infant.dob}/S${si+1}/P${pi+1}`);
+        idx++;
+      });
+    }
+  });
   if(state.finalized){
     rows.push(`${idx}  SSR OTHS 1A ${randDigits(9)} - FARE RULE OVERRIDES TKT DEADLINE IF MORE RESTRICTIVE`); idx++;
-    rows.push(`${idx}  OPC-${randDate()}:0541/1C8/${dominantAirline()} CANCELLATION DUE TO NO TICKET DAC TIME ZONE/TKT/S2-${state.segments.length}`); idx++;
+    rows.push(`${idx}  OPC-${randDate()}:0541/1C8/${al} CANCELLATION DUE TO NO TICKET DAC TIME ZONE/TKT/S2-${state.segments.length}`); idx++;
   }
   printLines(rows, '');
 }
 function dominantAirline(){
   return (state.segments[0] && state.segments[0].al) || "XX";
+}
+function airlinesInPNR(){
+  return [...new Set(state.segments.map(s=>s.al))];
 }
 function randDigits(n){ let s=''; for(let i=0;i<n;i++) s+=Math.floor(Math.random()*10); return s; }
 function randDate(){ return "11NOV"; }
@@ -325,33 +354,45 @@ function handleAN(cmd, isDirect){
 function handleSS(cmd){
   const m = cmd.match(/^SS(\d+)([A-Z]+)(\d+)$/i);
   if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
-  const [, countStr, cls, lineStr] = m;
+  const [, countStr, clsRaw, lineStr] = m;
   const count = parseInt(countStr,10);
   const lineNum = parseInt(lineStr,10);
-  if(cls.length !== 1){ printLines(["CHECK CLASS OF SERVICE"], 'err'); return; }
   if(!state.lastRoute){ printLines(["NO ACTIVE AVAILABILITY DISPLAY — run an AN search first"], 'err'); return; }
   const route = findRouteData(state.lastRoute.orig, state.lastRoute.dest);
   const line = route.lines.find(l=>l.line===lineNum);
   if(!line){ printLines(["INVALID LINE NUMBER"], 'err'); return; }
+
+  // Class letters: either one letter (applies to every leg on this line —
+  // this worked for a 2-leg connection in testing), or exactly one letter
+  // per leg (e.g. "YY" for a 2-leg line where each leg is sold separately —
+  // also seen in testing). Anything else is a genuine class-format error.
+  let classPerLeg;
+  if(clsRaw.length === 1){
+    classPerLeg = line.segs.map(()=>clsRaw.toUpperCase());
+  } else if(clsRaw.length === line.segs.length){
+    classPerLeg = clsRaw.toUpperCase().split('');
+  } else {
+    printLines(["CHECK CLASS OF SERVICE"], 'err'); return;
+  }
+
   if(line.forceError){
-    const msgs = line.segs.map(s=>`${s.al} ${s.fn} ${s.classes[cls.toUpperCase()]!==undefined?cls.toUpperCase():'O'} ${state.lastRoute.date} 2 ${s.dep}${s.arr} ${line.forceError}`);
+    const msgs = line.segs.map((s,i)=>`${s.al} ${s.fn} ${classPerLeg[i]} ${state.lastRoute.date} 2 ${s.dep}${s.arr} ${line.forceError}`);
     printLines(msgs, 'err');
     return;
   }
-  const classKey = cls.toUpperCase();
-  const notInClass = line.segs.some(s => s.classes[classKey]===undefined);
+  const notInClass = line.segs.some((s,i) => s.classes[classPerLeg[i]]===undefined);
   if(notInClass){ printLines(["CHECK CLASS OF SERVICE"], 'err'); return; }
   if(line.phantom){
     const seg0 = line.segs[0];
-    printLines([`${seg0.al} ${seg0.fn} ${classKey} ${state.lastRoute.date} 7 ${seg0.dep}${seg0.arr} NOT AVAILABLE AND WAITLIST CLOSED`], 'err');
+    printLines([`${seg0.al} ${seg0.fn} ${classPerLeg[0]} ${state.lastRoute.date} 7 ${seg0.dep}${seg0.arr} NOT AVAILABLE AND WAITLIST CLOSED`], 'err');
     // auto fallback to AD display
     handleAN(`AD${state.lastRoute.date}${state.lastRoute.orig}${state.lastRoute.dest}`, true);
     return;
   }
   // success — add all segs in this line to PNR with DK status
-  line.segs.forEach(seg=>{
+  line.segs.forEach((seg,i)=>{
     state.segments.push({
-      al:seg.al, fn:seg.fn, cls:classKey, count:count,
+      al:seg.al, fn:seg.fn, cls:classPerLeg[i], count:count,
       dep:seg.dep, arr:seg.arr, depT:seg.depT, arrT:seg.arrT,
       eq:seg.eq, date:state.lastRoute.date, status:"DK"
     });
@@ -361,12 +402,37 @@ function handleSS(cmd){
 }
 
 function handleNM(cmd){
-  const m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+)$/i);
-  if(!m){ printLines(["INVALID FORMAT — try NM1SURNAME/FIRST NAME MR"], 'err'); return; }
-  state.name = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()}`;
+  // 1) Adult+Infant: NM1SURNAME/FIRST TITLE(INF ISURNAME/IFIRST ITITLE/DDMMMYY)
+  let m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MR|MRS|MS)\(INF\s*([A-Z ]+)\/([A-Z .]+?)\s+(MISS|MSTR)\/(\d{2}[A-Z]{3}\d{2,4})\)$/i);
+  if(m){
+    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}(INF${m[4].trim().toUpperCase()}/${m[5].trim().toUpperCase()} ${m[6].toUpperCase()}/${m[7].toUpperCase()})`;
+    state.passengers.push({
+      type:'infantCarrier', label,
+      infant:{ surname:m[4].trim().toUpperCase(), first:m[5].trim().toUpperCase(), title:m[6].toUpperCase(), dob:m[7].toUpperCase() }
+    });
+    afterNameAdded(); return;
+  }
+  // 2) Child: NM1SURNAME/FIRST MSTR(CHD/DDMMMYY) or MISS(CHD/...)
+  m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MSTR|MISS)\(CHD\/(\d{2}[A-Z]{3}\d{2,4})\)$/i);
+  if(m){
+    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}(CHD/${m[4].toUpperCase()})`;
+    state.passengers.push({ type:'child', label, dob:m[4].toUpperCase() });
+    afterNameAdded(); return;
+  }
+  // 3) Plain adult: NM1SURNAME/FIRST MR
+  m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MR|MRS|MS)$/i);
+  if(m){
+    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}`;
+    state.passengers.push({ type:'adult', label });
+    afterNameAdded(); return;
+  }
+  printLines(["INVALID FORMAT — try NM1SURNAME/FIRST NAME MR"], 'err');
+}
+function afterNameAdded(){
   updateStatusBar();
   renderPNR(`RP/${OFFICE_ID}/`);
-  if(!state.phone){ printLines(["*** NHP ***"], 'warn'); }
+  const noContact = !state.phone && state.contactSSRs.length===0;
+  if(noContact){ printLines(["*** NHP ***"], 'warn'); }
 }
 
 function handleAP(cmd){
@@ -384,14 +450,34 @@ function handleTK(cmd){
 
 function handleRF(cmd){
   state.received = cmd;
-  const hasQR = state.segments.some(s=>s.al==="QR");
   const rows = [];
-  rows.push("WARNING: SECURE FLT PASSENGER DATA REQUIRED FOR TICKETING PAX 1");
-  if(hasQR){
-    rows.push("WARNING: MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT");
-    rows.push("       FOR QR");
+  rows.push(`WARNING: SECURE FLT PASSENGER DATA REQUIRED FOR TICKETING PAX ${state.passengers.length||1}`);
+  // Contact SSR required per airline in the PNR — not QR-specific, seen with TK too.
+  const airlines = airlinesInPNR();
+  const haveEmail = state.contactSSRs.some(c=>/^SRCTCE/i.test(c));
+  const haveMobile = state.contactSSRs.some(c=>/^SRCTCM/i.test(c));
+  airlines.forEach(al=>{
+    if(!haveEmail || !haveMobile){
+      rows.push("WARNING: MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT");
+      rows.push(`       FOR ${al}`);
+    }
+  });
+  const hasChildOrInfant = state.passengers.some(p=>p.type==='child'||p.type==='infantCarrier');
+  if(hasChildOrInfant){
+    rows.push("WARNING: CHECK OSI/SSR STATUS CODE");
   }
   printLines(rows, 'warn');
+}
+
+function handleSRCTC(cmd){
+  // e.g. SRCTCE TK HK1-bayezid.sardar//gmail.com/P1
+  //      SRCTCM TK HK1-00880197548686/P1
+  const m = cmd.match(/^SRCTC([EM])\s+([A-Z0-9]{2})\s+((?:HK|NN|KK)\d+)-(.+)\/P(\d+)$/i);
+  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
+  const [, kind, al, status, value, paxNum] = m;
+  const line = `SRCTC${kind.toUpperCase()} ${al.toUpperCase()} ${status.toUpperCase()}-${value}/P${paxNum}`;
+  state.contactSSRs.push(line);
+  renderPNR(`RP/${OFFICE_ID}/`);
 }
 
 function finalize(){
@@ -401,10 +487,10 @@ function finalize(){
     state.segments.forEach(s=> s.status = "HK");
     state.finalized = true;
     state.savedPNRs[state.locator] = JSON.parse(JSON.stringify(state));
-    if(state.name){
-      const surname = state.name.split('/')[0];
+    state.passengers.forEach(p=>{
+      const surname = p.label.split('/')[0].trim();
       state.savedPNRs["NAME:"+surname] = state.locator;
-    }
+    });
   }
   updateStatusBar();
   renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU  ${new Date().toISOString().slice(0,10)}   <span class="locator">${state.locator}</span>`);
@@ -459,14 +545,19 @@ function handleFXD(){
 }
 
 // ---------- Router ----------
+let commandHistory = [];
+let historyPos = -1;
 function runCommand(raw){
   const cmd = raw.trim();
   if(!cmd) return;
+  commandHistory.push(cmd);
+  historyPos = commandHistory.length;
   printPromptEcho(cmd);
   const upper = cmd.toUpperCase();
 
   if(/^A[ND]\d{2}[A-Z]{3}[A-Z]{3}[A-Z]{3}(\/[A-Z0-9]+)?$/i.test(upper)) return handleAN(upper, upper.startsWith("AD"));
   if(/^SS\d+[A-Z]+\d+$/i.test(upper)) return handleSS(upper);
+  if(/^SRCTC[EM]/i.test(upper)) return handleSRCTC(upper);
   if(/^NM1/i.test(upper)) return handleNM(upper);
   if(/^AP\s/i.test(upper)) return handleAP(cmd);
   if(/^TK(TL|OK)/i.test(upper)) return handleTK(upper);
@@ -485,10 +576,18 @@ function runCommand(raw){
 function mountInput(){
   const row = document.createElement('div');
   row.className = 'inputRow';
-  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" spellcheck="false" placeholder="Enter a command...">`;
+  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a command...">`;
   term.appendChild(row);
   const input = row.querySelector('#cmdInput');
   input.focus();
+
+  // Force everything to capitals as it's typed — no need for Shift/Caps Lock.
+  input.addEventListener('input', ()=>{
+    const pos = input.selectionStart;
+    input.value = input.value.toUpperCase();
+    input.setSelectionRange(pos, pos);
+  });
+
   input.addEventListener('keydown', e=>{
     if(e.key === 'Enter'){
       const val = input.value;
@@ -496,6 +595,24 @@ function mountInput(){
       row.remove();
       runCommand(val);
       mountInput();
+      return;
+    }
+    // Alt+Up / Alt+Down — recall previous/next command, like Sabre's history shortcut.
+    if(e.altKey && e.key === 'ArrowUp'){
+      e.preventDefault();
+      if(commandHistory.length){
+        historyPos = Math.max(0, historyPos - 1);
+        input.value = commandHistory[historyPos] || '';
+      }
+      return;
+    }
+    if(e.altKey && e.key === 'ArrowDown'){
+      e.preventDefault();
+      if(commandHistory.length){
+        historyPos = Math.min(commandHistory.length, historyPos + 1);
+        input.value = commandHistory[historyPos] || '';
+      }
+      return;
     }
   });
   term.addEventListener('click', ()=> input.focus());
