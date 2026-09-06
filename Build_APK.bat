@@ -12,13 +12,17 @@ cd /d "%SCRIPT_DIR%"
 
 echo [1/4] Syncing latest HTML/JS/CSS assets to Android project...
 copy /Y "index.html" "android\app\src\main\assets\index.html" >nul
+if not exist "android\app\src\main\assets\css" mkdir "android\app\src\main\assets\css"
+xcopy /Y /E /I "css" "android\app\src\main\assets\css" >nul
+if not exist "android\app\src\main\assets\js" mkdir "android\app\src\main\assets\js"
+xcopy /Y /E /I "js" "android\app\src\main\assets\js" >nul
 if %ERRORLEVEL% NEQ 0 (
     color 0c
-    echo [ERROR] Failed to copy index.html to android assets!
+    echo [ERROR] Failed to sync assets to android project!
     pause
     exit /b 1
 )
-echo [OK] Assets synced successfully!
+echo [OK] All assets (HTML, CSS, JS) synced successfully!
 echo.
 
 echo [2/4] Setting up Java and Android environment...
