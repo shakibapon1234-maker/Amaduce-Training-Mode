@@ -988,6 +988,159 @@
     cursor: pointer;
   }
 
+  /* Ticket Details Modal matching Screenshot 3 */
+  .ticket-modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2500;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .ticket-modal-backdrop.show {
+    display: flex;
+  }
+  .ticket-modal-card {
+    background: #ffffff;
+    border-radius: 8px;
+    width: 440px;
+    max-width: 92vw;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    padding: 24px 28px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    animation: modalPop 0.18s ease-out;
+  }
+  @keyframes modalPop {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .ticket-modal-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #475569;
+    margin: 0 0 18px 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+  }
+  .ticket-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    margin-bottom: 24px;
+    font-size: 13.5px;
+    color: #334155;
+    line-height: 1.5;
+  }
+  .ticket-detail-row {
+    display: flex;
+    align-items: baseline;
+  }
+  .detail-label {
+    width: 145px;
+    color: #64748b;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .detail-value {
+    color: #0f172a;
+    font-weight: bold;
+    word-break: break-all;
+  }
+  .ticket-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 14px;
+  }
+  .ticket-btn-close {
+    background: #e2e8f0;
+    color: #1e293b;
+    border: none;
+    padding: 8px 22px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background 0.15s;
+  }
+  .ticket-btn-close:hover { background: #cbd5e1; }
+  .ticket-btn-print {
+    background: #38bdf8;
+    color: #ffffff;
+    border: none;
+    padding: 8px 24px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.4);
+    transition: all 0.15s;
+  }
+  .ticket-btn-print:hover {
+    background: #0284c7;
+    box-shadow: 0 3px 8px rgba(2, 132, 199, 0.5);
+  }
+
+  /* TTP Output Row with Print Button (Screenshot 2) */
+  .ttp-issued-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #092635;
+    color: #38bdf8;
+    padding: 8px 12px;
+    margin: 6px 0;
+    border-radius: 4px;
+    border-left: 4px solid #38bdf8;
+    font-size: 13px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-weight: 500;
+  }
+  .ttp-inline-print-btn {
+    background: #38bdf8;
+    color: #ffffff;
+    border: none;
+    padding: 5px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(56, 189, 248, 0.4);
+    transition: all 0.15s ease;
+  }
+  .ttp-inline-print-btn:hover {
+    background: #0284c7;
+    transform: translateY(-1px);
+  }
+
+  @media print {
+    body * {
+      visibility: hidden;
+    }
+    #ticketModalCard, #ticketModalCard * {
+      visibility: visible;
+    }
+    #ticketModalCard {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      box-shadow: none;
+      border: 1px solid #000;
+    }
+    .ticket-modal-footer {
+      display: none !important;
+    }
+  }
+
   /* Responsive tweaks */
   @media (max-width: 900px) {
     .goto-sidebar { display: none; }
@@ -1068,6 +1221,7 @@
       <button type="button" class="smart-btn" onclick="runSmartCmd('IR')" title="Ignore and Retrieve">IR</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('TKOK')" title="Ticketing OK Immediate (Screenshot 2)">TKOK</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('TKTL')" title="Ticketing Time Limit">TKTL</button>
+      <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FM7')" title="Add Commission 7% (Screenshot 1)">FM7</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('HE/MEAL')" title="Meal Codes Index (Screenshot 1)">HE/MEAL</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('MS22')" title="Meal Codes in SSR (Screenshot 2)">MS22</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('SRMOML/P2')" title="Muslim Meal for P2 (Screenshot 3)">SRMOML/P2</button>
@@ -1122,6 +1276,9 @@
       <button class="quick-pnr-btn" style="background:#4338ca; color:#fff; border-color:#3730a3; margin-top:4px;" onclick="loadThaiAirwaysPNR()">
         <span>✈️</span> Load TG Thai PNR (OGJZJ9)
       </button>
+      <button class="quick-pnr-btn" style="background:#0f766e; color:#fff; border-color:#115e59; margin-top:4px;" onclick="loadJhonyPNR()">
+        <span>🎫</span> Load Jhony PNR (ICRBPO)
+      </button>
       <button class="quick-pnr-btn secondary" onclick="openSeatMap(0)">
         <span>💺</span> Open Seat Map (TK 713)
       </button>
@@ -1138,6 +1295,9 @@
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('TQT')">
           <span>📊</span> TQT — Display Ticket Quote Table
+        </button>
+        <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('FM7')">
+          <span>💼</span> FM7 — Commission 7% (Screenshot 1)
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('FPINV')">
           <span>📝</span> FPINV — Form of Payment (Invoice)
@@ -1367,6 +1527,43 @@
 <!-- Toast Notification -->
 <div class="toast-notification" id="toastNotification">Seats booked successfully!</div>
 
+<!-- Ticket Details Print Modal (Matching Screenshot 3) -->
+<div class="ticket-modal-backdrop" id="ticketModalBackdrop" onclick="if(event.target===this) closeTicketModal()">
+  <div class="ticket-modal-card" id="ticketModalCard">
+    <h3 class="ticket-modal-title">Ticket Details</h3>
+    <div class="ticket-modal-body">
+      <div class="ticket-detail-row">
+        <span class="detail-label">Passenger Name:</span>
+        <span class="detail-value" id="tktModalPax">MR MD JHONY</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Ticket Number:</span>
+        <span class="detail-value" id="tktModalNumber">157-7800396554421</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Fare:</span>
+        <span class="detail-value" id="tktModalFare">BDT 30000</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Flight Number:</span>
+        <span class="detail-value" id="tktModalFlight">555</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Departure Date:</span>
+        <span class="detail-value" id="tktModalDate">2026-07-25</span>
+      </div>
+      <div class="ticket-detail-row">
+        <span class="detail-label">Destination:</span>
+        <span class="detail-value" id="tktModalDest">Singapore Changi Airport</span>
+      </div>
+    </div>
+    <div class="ticket-modal-footer">
+      <button type="button" class="ticket-btn-close" onclick="closeTicketModal()">Close</button>
+      <button type="button" class="ticket-btn-print" onclick="printTicketFromModal()">Print</button>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom Status Footer -->
 <div class="status-footer">
   <div class="footer-left">
@@ -1525,6 +1722,48 @@ function loadThaiAirwaysPNR(){
   renderPNR();
   mountInput();
   showToast("Loaded Thai Airways PNR OGJZJ9 (Screenshot 1)");
+}
+
+// ---------- Jhony Training PNR (Matching Screenshot 1 & 2 - ICRBPO) ----------
+const JHONY_PNR = {
+  locator: "ICRBPO",
+  officeId: "DACVS31XW",
+  agentCode: "BP/AS",
+  dateStamp: "17JUN26/1324Z",
+  headerLine2: "DACVS31XW/4455BP/17JUN26",
+  passengers: [
+    { type: 'adult', label: "JHONY/MD MR Male", nameDisplay: "MR MD JHONY", code: "P1" }
+  ],
+  segments: [
+    { al:"BG", fn:"555", cls:"Y", date:"25JUL", day:"7", dep:"DAC", arr:"SIN", status:"DK", count:1, depT:"1659", arrT:"2059", arrDate:"25JUL", eq:"739", tktCode:"BG/54FHGK", fullDate:"2026-07-25" }
+  ],
+  phone: "DAC JHONY TECH TRAVEL CTC0505793144",
+  ticketing: "OK18JUN/DACVS31XW",
+  commission: "7%",
+  finalized: true,
+  hasTST: true,
+  fop: "INV",
+  showOths: false,
+  showFE: false,
+  seats: {},
+  tstRecords: [
+    { tstNum: 1, pCode: '.1', name: 'JHONY/MD MR', fare: 30000, tax: 0, total: 30000, ptc: 'ADT', segs: '3' }
+  ],
+  specialSSRs: [],
+  opwRemarks: [],
+  osiEntries: [],
+  hasPending: false
+};
+
+function loadJhonyPNR(){
+  state = JSON.parse(JSON.stringify(JHONY_PNR));
+  activeSegIdx = 0;
+  activePaxCode = "P1";
+  term.innerHTML = '';
+  printPromptEcho("RT ICRBPO");
+  renderPNR();
+  mountInput();
+  showToast("Loaded JHONY PNR ICRBPO (Screenshot 1)");
 }
 
 const term = document.getElementById('term');
@@ -2241,38 +2480,57 @@ function handleTK(cmd){
   showToast(`✅ Ticketing set: TK ${state.ticketing}`);
 }
 
+// ---------- FM — Fare Modifier / Commission (Screenshot 1: FM7) ----------
+function handleFM(cmd){
+  const upper = cmd.toUpperCase().trim();
+  const m = upper.match(/^FM\s*(\*?[0-9.]+%?N?)?/i);
+  const val = (m && m[1]) ? m[1].replace(/[*N%]/g, '') : "7";
+  state.commission = val + "%";
+  state.hasPending = true;
+  printLines(["Commission already added"], 'success');
+  showToast(`✓ Commission ${state.commission} added (FM)`);
+}
+
 function handleRF(cmd){
   const rf = cmd.replace(/^RF\s*/i, '').trim() || 'R';
   state.receivedFrom = rf;
+  const agencyText = state.phone || `DAC JHONY TECH TRAVEL CTC0505793144`;
   printLines([
-    `RP/${OFFICE_ID}/${OFFICE_ID}          RF: ${rf}`,
-    `--- RECEIVED FROM: ${rf} --- TYPE ER OR ET TO END TRANSACTION ---`
-  ], 'muted');
-  showToast(`✓ RF ${rf} recorded — Type ER or ET to finalize`);
+    `PNRs received by Agency: ${agencyText}`
+  ], 'success');
+  showToast(`✓ Received From (${rf}) saved`);
 }
 
 function handleER(){
-  if(!state.locator) state.locator = "J99GZO";
+  if(!state.locator) state.locator = "ICRBPO";
   state.segments.forEach(s=> s.status = "HK");
   state.finalized = true;
   state.hasPending = false;
-  const rfLine = state.receivedFrom ? `\nRF: ${state.receivedFrom}` : '';
-  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU  13NOV24/1435Z   <span class="locator">${state.locator}</span>${rfLine}`);
-  showToast(`✅ PNR Received & Saved (${state.locator})`);
+  printLines([`ER *`], 'success');
+  showToast(`✅ PNR Saved (${state.locator})`);
 }
 
 function handleIR(){
   if(!state.locator) {
-    loadLessonPNR();
-    return;
+    if(state.passengers.length && state.segments.length){
+      state.locator = "ICRBPO";
+    } else {
+      loadLessonPNR();
+      return;
+    }
   }
-  renderPNR(`--- RLR MSC ---`);
+  const currOffice = state.officeId || "DACVS31XW";
+  const agCode = state.agentCode || "BP/AS";
+  const dt = state.dateStamp || "17JUN26/1324Z";
+  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>\n${currOffice}/4455BP/${dt.split('/')[0]}`);
 }
 
 function handleRT(cmd){
   const loc = (cmd||'').replace(/^RT\s*/i, '').trim().toUpperCase();
   if(loc === 'OGJZJ9' || loc === 'TG'){
     loadThaiAirwaysPNR();
+  } else if(loc === 'ICRBPO' || loc === 'JHONY' || loc === 'BG'){
+    loadJhonyPNR();
   } else {
     loadLessonPNR();
   }
@@ -2566,6 +2824,84 @@ function runSmartCmd(cmd){
   mountInput();
 }
 
+// ---------- NAME MODIFY — NU1HAMED/MAHMOUD  or  1/MOUSSA/MAHMOUD ----------
+// Matches real Amadeus GDS output: "Passenger 1 name changed from OLD to NEW"
+function handleNameModify(cmd){
+  const upper = cmd.toUpperCase().trim();
+
+  let paxNum = null;
+  let newSurname = '';
+  let newFirst = '';
+
+  // Format 1: NU1HAMED/MAHMOUD
+  const mNU = upper.match(/^NU(\d+)([A-Z]+)\/([A-Z]+)$/i);
+  if(mNU){
+    paxNum    = parseInt(mNU[1], 10);
+    newSurname = mNU[2].trim();
+    newFirst   = mNU[3].trim();
+  }
+
+  // Format 2: 1/MOUSSA/MAHMOUD
+  if(!mNU){
+    const mSlash = upper.match(/^(\d+)\/([A-Z]+)\/([A-Z]+)$/i);
+    if(mSlash){
+      paxNum    = parseInt(mSlash[1], 10);
+      newSurname = mSlash[2].trim();
+      newFirst   = mSlash[3].trim();
+    }
+  }
+
+  if(!paxNum || !newSurname || !newFirst){
+    printLines([
+      'INVALID NAME MODIFY FORMAT',
+      'Format 1: NU1HAMED/MAHMOUD',
+      'Format 2: 1/MOUSSA/MAHMOUD'
+    ], 'err');
+    return;
+  }
+
+  // Make sure a PNR is loaded
+  if(!state.locator && !state.passengers.length){
+    loadLessonPNR();
+  }
+
+  const paxIdx = paxNum - 1;
+  if(paxIdx < 0 || paxIdx >= state.passengers.length){
+    printLines([`PASSENGER ${paxNum} NOT FOUND — PNR HAS ${state.passengers.length} PASSENGER(S)`], 'err');
+    return;
+  }
+
+  const pax = state.passengers[paxIdx];
+
+  // Capture old display name for the confirmation message
+  const oldLabel = (pax.nameDisplay || pax.label || '').split('(')[0].trim();
+  const oldDisplay = oldLabel || `PASSENGER ${paxNum}`;
+
+  // Build new label — preserve type suffix (CHD/DOB, INF, etc.) if present
+  const suffixMatch = (pax.label || '').match(/\(.*\)/);
+  const suffix = suffixMatch ? ` ${suffixMatch[0]}` : '';
+
+  const newLabel     = `${newSurname}/${newFirst}${suffix}`;
+  const newDisplay   = `${newSurname}/${newFirst}`;
+
+  // Detect title from existing label
+  const titleMatch = (pax.label || '').match(/\b(MR|MRS|MS|MISS|MSTR)\b/i);
+  const title = titleMatch ? ` ${titleMatch[1].toUpperCase()}` : '';
+  const newLabelFull = `${newSurname}/${newFirst}${title}${suffix}`;
+
+  // Apply changes
+  pax.label       = newLabelFull.trim();
+  pax.nameDisplay = newDisplay;
+  state.hasPending = true;
+
+  // Output matching Screenshot 1 exactly
+  printLines([
+    `Passenger ${paxNum} name changed from ${esc(oldDisplay)} to ${newSurname}/${newFirst}`
+  ], 'success');
+
+  showToast(`✓ Name modified: P${paxNum} → ${newSurname}/${newFirst} — Type IR to display updated PNR`);
+}
+
 // ---------- FXB / FXP / FXX — Pricing & TST Creation (Screenshot 1) ----------
 function handleFXB(cmd){
   if(!state.locator){
@@ -2674,65 +3010,54 @@ function handleTQT(cmd){
 
 // ---------- FPINV / FP ... — Form of Payment (Screenshot 4) ----------
 function handleFP(cmd){
-  if(!state.locator){
-    loadLessonPNR();
-  }
   const fopVal = cmd.replace(/^FP\s*/i, '').trim().toUpperCase() || 'INV';
   state.fop = fopVal;
   state.hasPending = true;
-
-  // Immediately render updated PNR display (matches Screenshot 4)
-  renderPNR();
+  printLines([`Ticket Modifiers Updated`], 'success');
   showToast(`✅ Form of Payment (FP ${fopVal}) recorded — Type TTP to issue ticket`);
 }
 
-// ---------- TTP — Issue Electronic Ticket (Issue Entry) ----------
+// ---------- TTP — Issue Electronic Ticket (Issue Entry — Screenshot 2 & 3) ----------
 function handleTTP(cmd){
-  if(!state.locator){
-    loadThaiAirwaysPNR();
-  }
-  if(!state.hasTST){
-    printLines(['NO TST EXISTS — ENTER FXB FIRST TO PRICE AND CREATE TST'], 'err');
-    return;
-  }
-  if(!state.fop){
-    state.fop = 'INV';
+  if(!state.locator && (!state.passengers.length || !state.segments.length)){
+    loadJhonyPNR();
   }
 
+  const isBG = (state.segments[0] && state.segments[0].al === 'BG') || (state.locator === 'ICRBPO') || (!state.segments[0] && !state.locator);
   const isTG = (state.segments[0] && state.segments[0].al === 'TG') || (state.locator === 'OGJZJ9');
-  const alCode = isTG ? '217' : '074';
-  const alLetter = isTG ? 'TG' : 'TK';
-  const baseTkt = 2456789012;
-  const currentOffice = state.officeId || OFFICE_ID;
-  const tktDate = state.dateStamp ? state.dateStamp.split('/')[0] : '01JUL18';
 
-  const tktRows = [
-    `OK ETICKET`
-  ];
+  const alCode = isBG ? '157' : (isTG ? '217' : '074');
+  const alLetter = isBG ? 'BG' : (isTG ? 'TG' : 'TK');
+  const tktNum = isBG ? '157-7800396554421' : (isTG ? '217-2456789012' : '074-2456789012');
 
-  state.tickets = [];
-  const tstRecs = (state.tstRecords && state.tstRecords.length) ? state.tstRecords : [
-    { tstNum: 1, pCode: '.1', name: 'AHMED/KARIM', fare: 13529, tax: 6084, total: 19613, ptc: 'CH', segs: '3-4' },
-    { tstNum: 2, pCode: '.2', name: 'AHMED/SHAMIMA', fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '3-4' },
-    { tstNum: 3, pCode: '.2 I', name: 'AHMED/TAHERA(INF)', fare: 6640, tax: 252, total: 6892, ptc: 'IN', segs: '3-4' }
-  ];
+  // Robustly get fare value — never undefined
+  let fareVal = 30000;
+  if(state.tstRecords && state.tstRecords.length > 0){
+    const totalSum = state.tstRecords.reduce((sum, r) => sum + (parseInt(r.total, 10) || 0), 0);
+    if(totalSum > 0) fareVal = totalSum;
+  }
 
-  tstRecs.forEach((t, i) => {
-    const tktNum = `${alCode}-${baseTkt + i}`;
-    state.tickets.push({
-      tktNum,
-      pax: t.pCode,
-      name: t.name,
-      amount: t.total,
-      alLetter,
-      tktDate,
-      office: currentOffice
-    });
-    tktRows.push(`${tktNum}  ${t.name}`);
-  });
+  const flightNum = (state.segments[0] && state.segments[0].fn) ? state.segments[0].fn : '555';
+  const depDate = (state.segments[0] && state.segments[0].fullDate) ? state.segments[0].fullDate : '2026-07-25';
+  const destName = (state.segments[0] && state.segments[0].arr === 'SIN') ? 'Singapore Changi Airport' : 
+                   ((state.segments[0] && state.segments[0].arr === 'BKK') ? 'Bangkok Suvarnabhumi Airport' :
+                   ((state.segments[0] && state.segments[0].arr === 'DXB') ? 'Dubai International Airport' :
+                   ((state.segments[0] && state.segments[0].arr === 'IST') ? 'Istanbul Airport' :
+                   ((state.segments[0] && state.segments[0].arr === 'LHR') ? 'London Heathrow Airport' : 'Destination Airport'))));
 
-  tktRows.push(``);
-  tktRows.push(`--- TICKET ISSUED SUCCESSFULLY ---`);
+  let paxName = 'MR MD JHONY';
+  if(state.passengers && state.passengers.length){
+    const p = state.passengers[0];
+    const raw = (p.nameDisplay || p.label || '').split('(')[0].trim();
+    if(raw.includes('/')){
+      const parts = raw.split('/');
+      const surname = parts[0].trim();
+      const rest = (parts[1] || '').trim();
+      paxName = `${rest} ${surname}`.trim();
+    } else {
+      paxName = raw || 'MR MD JHONY';
+    }
+  }
 
   // Finalize state
   state.finalized = true;
@@ -2740,19 +3065,70 @@ function handleTTP(cmd){
   state.hasPending = false;
   state.segments.forEach(s => s.status = 'HK');
 
-  // Update TK line to include /ET
+  const currentOffice = state.officeId || OFFICE_ID;
+  const tktDate = state.dateStamp ? state.dateStamp.split('/')[0] : '18JUN26';
+
   if(state.ticketing && !state.ticketing.includes('/ET')){
     state.ticketing = state.ticketing + '/ET';
   } else if(!state.ticketing){
     state.ticketing = `OK${tktDate}/${currentOffice}/ET`;
   }
 
-  printLines(tktRows, '');
-  showToast(`🎉 Electronic Ticket(s) Issued Successfully!`);
+  if(!state.tickets) state.tickets = [];
+  state.tickets = [{
+    tktNum,
+    pax: 'P1',
+    name: paxName,
+    amount: fareVal,
+    alLetter,
+    tktDate,
+    office: currentOffice
+  }];
 
-  setTimeout(()=>{
-    renderPNR();
-  }, 350);
+  // Store ticket info in data attributes to avoid JS injection issues in onclick
+  const safeId = 'ttp_' + Date.now();
+  window._ttpData = window._ttpData || {};
+  window._ttpData[safeId] = { paxName, tktNum, fareVal, flightNum, depDate, destName };
+
+  // Render the exact row from Screenshot 2 with Print button
+  const rowHtml = `
+    <div class="ttp-issued-row">
+      <span>ELECTRONIC TKT GENERATED TTL FARE BDT ${fareVal} TICKET NUMBER: ${tktNum} SUPPORTING DOCUMENTS GENERATED</span>
+      <button type="button" class="ttp-inline-print-btn" data-ttp-id="${safeId}">🖨 Print</button>
+    </div>
+  `;
+  printRaw(rowHtml);
+
+  // Attach click listener via event delegation (avoids inline JS escaping issues)
+  setTimeout(() => {
+    const btn = document.querySelector(`[data-ttp-id="${safeId}"]`);
+    if(btn){
+      btn.addEventListener('click', () => {
+        const d = window._ttpData[safeId];
+        if(d) openTicketModal(d.paxName, d.tktNum, 'BDT ' + d.fareVal, d.flightNum, d.depDate, d.destName);
+      });
+    }
+  }, 0);
+
+  showToast(`🎉 Electronic Ticket Generated (${tktNum}) — Click Print to view`);
+}
+
+function openTicketModal(pax, tktNo, fare, flight, depDate, dest){
+  document.getElementById('tktModalPax').textContent = pax;
+  document.getElementById('tktModalNumber').textContent = tktNo;
+  document.getElementById('tktModalFare').textContent = fare;
+  document.getElementById('tktModalFlight').textContent = flight;
+  document.getElementById('tktModalDate').textContent = depDate;
+  document.getElementById('tktModalDest').textContent = dest;
+  document.getElementById('ticketModalBackdrop').classList.add('show');
+}
+
+function closeTicketModal(){
+  document.getElementById('ticketModalBackdrop').classList.remove('show');
+}
+
+function printTicketFromModal(){
+  window.print();
 }
 
 // ---------- MEAL HELP & REFERENCE (Screenshot 1 & 2) ----------
@@ -2850,6 +3226,7 @@ function runCommand(raw){
   if(/^NM1/i.test(upper)) return handleNM(upper);
   if(/^AP\s/i.test(upper)) return handleAP(cmd);
   if(/^TK\s*(TL|OK)/i.test(upper)) return handleTK(upper);
+  if(/^FM/i.test(upper)) return handleFM(upper);
 
   // RF / Received From and ER / ET End Transaction
   if(/^RF\S*;\s*(ER|ET)$/i.test(upper)) {
@@ -2899,7 +3276,13 @@ function runCommand(raw){
   // TTP — Issue Electronic Ticket (Issue Entry)
   if(/^TTP(\/\S+)?$/i.test(upper)) return handleTTP(upper);
 
-  printLines([`FORMAT — command not recognised. Try: HE/MEAL · MS22 · SRMOML/P2 · RFR · ER · FXB · TQT · FPINV · TTP`], 'err');
+  // ---------- NAME MODIFY — Two real Amadeus formats ----------
+  // Format 1: NU1HAMED/MAHMOUD  (NU + pax number + new name)
+  // Format 2: 1/MOUSSA/MAHMOUD  (pax number + / + surname + / + firstname)
+  if(/^NU\d+[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
+  if(/^\d+\/[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
+
+  printLines([`FORMAT — command not recognised. Try: HE/MEAL · MS22 · SRMOML/P2 · RFR · ER · FXB · TQT · FPINV · TTP · NU1NAME/FIRST · 1/NAME/FIRST`], 'err');
 }
 
 function mountInput(){
