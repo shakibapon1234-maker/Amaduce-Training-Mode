@@ -1,0 +1,26 @@
+# Gradle caches and build directories
+.gradle/
+build/
+**/build/
+android/.gradle/
+android/app/build/
+
+# Node dependencies
+node_modules/
+package-lock.json
+
+# IDE settings
+.idea/
+*.iml
+.vscode/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Android local
+local.properties
+.externalNativeBuild/
+.cxx/
+*.hprof
+*.log
