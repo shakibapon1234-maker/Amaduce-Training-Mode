@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>WFA Amadeus Practice Simulator</title>
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --blue:#0033cc;
+    --red:#b30000;
+    --magenta:#a3007a;
+    --grey:#6b6b6b;
+    --border:#d8d8d8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:Consolas, "Courier New", monospace;
+    background:#eef0f3; color:var(--ink);
+  }
+  .topbar{
+    background:#003399; color:#fff; padding:10px 16px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    font-family:Arial, sans-serif; flex-wrap:wrap;
+  }
+  .topbar .brand{ font-weight:700; letter-spacing:.5px; font-size:14px; }
+  .topbar .disclaimer{ font-size:11px; opacity:.85; text-align:right; max-width:520px; }
+  .toolbar{
+    background:#f4f5f7; border-bottom:1px solid var(--border);
+    padding:6px 16px; font-family:Arial, sans-serif; font-size:12px; color:#333;
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .toolbar button{
+    font-family:Arial, sans-serif; font-size:13px; padding:6px 12px;
+    border:1px solid #bbb; background:#fff; border-radius:3px; cursor:pointer;
+  }
+  .toolbar button:hover{ background:#f0f0f0; }
+  .wrap{ display:flex; height:calc(100vh - 84px); min-height:0; }
+  .term{
+    flex:1; background:#ffffff; padding:14px 16px; overflow-y:auto;
+    font-size:14px; line-height:1.45; -webkit-overflow-scrolling:touch;
+  }
+  .help{
+    width:280px; flex-shrink:0; background:#fafafa; border-left:1px solid var(--border);
+    padding:14px; overflow-y:auto; font-family:Arial, sans-serif; font-size:12.5px; color:#333;
+  }
+  .help h3{ font-size:13px; margin:14px 0 6px; color:#003399; }
+  .help h3:first-child{ margin-top:0; }
+  .help code{ background:#eee; padding:1px 4px; border-radius:2px; word-break:break-word; }
+
+  /* --- Mobile / narrow screens --- */
+  @media (max-width: 760px){
+    .topbar{ padding:8px 10px; }
+    .topbar .brand{ font-size:13px; }
+    .topbar .disclaimer{ display:none; }
+    .toolbar{ padding:6px 10px; font-size:11px; }
+    .wrap{ flex-direction:column; height:auto; min-height:calc(100vh - 84px); }
+    .term{ font-size:13px; padding:10px 10px 6px; order:1; }
+    .help{
+      width:auto; border-left:none; border-top:1px solid var(--border);
+      order:2; max-height:38vh;
+    }
+    .help.collapsed{ display:none; }
+    .inputRow input{ font-size:16px; } /* prevents auto-zoom on mobile keyboards */
+  }
+  .line{ white-space:pre-wrap; word-break:break-word; }
+  .prompt-line{ color:var(--ink); }
+  .prompt-line .chevron{ color:var(--grey); }
+  .out{ margin:2px 0 10px 0; }
+  .err{ color:var(--red); }
+  .warn{ color:#a35a00; }
+  .name{ color:var(--magenta); font-weight:700; }
+  .al{ color:var(--blue); font-weight:700; }
+  .locator{ color:var(--blue); font-weight:700; }
+  .muted{ color:var(--grey); }
+  .inputRow{ display:flex; align-items:center; gap:6px; margin-top:4px; }
+  .inputRow .chevron{ color:var(--grey); }
+  .inputRow input{
+    flex:1; border:none; outline:none; font-family:inherit; font-size:14px;
+    background:transparent; color:var(--ink);
+  }
+  .footer{
+    font-family:Arial, sans-serif; font-size:11px; color:#888; background:#f4f5f7;
+    border-top:1px solid var(--border); padding:5px 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">WFA &nbsp;|&nbsp; AMADEUS PRACTICE TERMINAL</div>
+  <div class="disclaimer">
+    Independent training simulation built by Wings Fly Aviation Academy for internal lab use.
+    Not affiliated with, endorsed by, or connected to Amadeus IT Group. No live GDS access.
+  </div>
+</div>
+
+<div class="toolbar">
+  <span id="pnrStatus" class="muted">No active PNR</span>
+  <button id="resetBtn">Reset session</button>
+  <button id="helpToggleBtn">Command help</button>
+  <span class="muted">Office ID: WFALAB1</span>
+</div>
+
+<div class="wrap">
+  <div class="term" id="term">
+    <div class="line muted">Type a command below. Try: <code>AN22NOVDACDXB</code></div>
+  </div>
+  <div class="help" id="helpPanel">
+    <h3>Availability</h3>
+    <code>AN[date][orig][dest]</code><br>
+    <code>AN...DACDXB/QR</code> (airline filter)<br>
+    <code>AD[date][orig][dest]</code>
+
+    <h3>Sell</h3>
+    <code>SS[count][class][line]</code><br>e.g. <code>SS1Y2</code>
+
+    <h3>PNR elements</h3>
+    <code>NM1SURNAME/FIRST MR</code><br>
+    <code>AP [contact text]</code><br>
+    <code>TKTL</code> / <code>TKOK</code><br>
+    <code>RF[code];ER</code>
+
+    <h3>Finish / manage</h3>
+    <code>ER</code> — End Transaction<br>
+    <code>IR</code> — Ignore &amp; Retrieve (redisplay)<br>
+    <code>RT[locator]</code> or <code>RT/SURNAME</code><br>
+    <code>XI</code> — cancel PNR<br>
+    <code>IEP-EML-you@mail.com</code> — email itinerary
+
+    <h3>Try seeded routes</h3>
+    Verified from real screenshots: DACDXB · DACSIN · DACDOH · DOHDXB · DXBDOH · DOHDAC · DACCCU · DACKUL<br><br>
+    Generic practice data: DACJED · DACRUH · DACMED · DACBKK · DACIST · DACLHR · DACDEL · DACBOM · DACKTM · DACHKG · DACCAN · DACPEK · DACAUH · DACBAH · DACKWI · DACSHJ · DACMLE · DACCDG · DACMAN
+
+    <h3>Note</h3>
+    This is an early prototype. Screen formatting is a close approximation, not a pixel-exact copy — command syntax, status codes (DK→HK) and error behavior are the verified parts so far.
+  </div>
+</div>
+
+<div class="footer">Session-only — nothing here is saved or sent anywhere. Refresh the page to fully reset.</div>
+
+<script>
+const OFFICE_ID = "WFALAB1";
+
+// ---------- Seed flight data (built from verified screenshots) ----------
+const FLIGHTS = {
+  DACDXB: { date:"22NOV", lines:[
+    {line:1, phantom:true, segs:[{al:"EK",fn:"585",classes:{F:2,A:2,J:4,C:4,I:4,O:7,H:7,Y:7,R:7,X:7,M:7,B:7,U:7,K:7,Q:7,L:7,T:7},dep:"DAC",arr:"DXB",depT:"0100",arrT:"0425",eq:"77W",dur:"5:25"}]},
+    {line:2, segs:[{al:"FZ",fn:"2331",classes:{Y:7},dep:"DAC",arr:"DXB",depT:"0805",arrT:"1155",eq:"7M8",dur:"5:50"}]},
+    {line:3, segs:[{al:"FZ",fn:"502",classes:{Y:9,R:9,X:9,M:9,B:9,U:9},dep:"DAC",arr:"DXB",depT:"0805",arrT:"1155",eq:"7M8",dur:"5:50"}]},
+    {line:4, phantom:true, segs:[{al:"EK",fn:"583",classes:{F:2,A:2,J:4,C:4,I:4,O:7,H:7,Y:7,R:7,X:7,M:7,B:7,U:7,K:7,Q:7,L:7,T:7},dep:"DAC",arr:"DXB",depT:"0955",arrT:"1320",eq:"77W",dur:"5:25"}]},
+    {line:5, phantom:true, segs:[{al:"EK",fn:"587",classes:{J:4,C:4,I:4,O:7,H:7,Y:7,R:7,X:7,M:7,B:7,U:7,K:7,Q:7,L:7,T:7},dep:"DAC",arr:"DXB",depT:"1845",arrT:"2215",eq:"77W",dur:"5:30"}]},
+    {line:6, segs:[{al:"FZ",fn:"524",classes:{Y:9,R:9,X:9,M:9,B:9,U:9},dep:"DAC",arr:"DXB",depT:"2140",arrT:"0130+1",eq:"7M8",dur:"5:50"}]}
+  ]},
+  DACSIN: { date:"24NOV", lines:[
+    {line:1, segs:[{al:"SQ",fn:"447",classes:{Z:9,C:9,J:9,U:9,D:9,Y:9,B:9},dep:"DAC",arr:"SIN",depT:"2355",arrT:"0600+1",eq:"787",dur:"4:05"}]},
+    {line:2, forceError:"INVALID NUMBER IN PARTY", segs:[
+      {al:"MH",fn:"197",classes:{J:9,C:8,D:8,Z:8,I:2,Y:9,B:9},dep:"DAC",arr:"KUL",depT:"0050",arrT:"0650",eq:"7M8",dur:""},
+      {al:"MH",fn:"601",classes:{J:9,C:9,D:9,Z:8,I:2,Y:9,B:9},dep:"KUL",arr:"SIN",depT:"0750",arrT:"0905",eq:"7M8",dur:""}
+    ]},
+    {line:3, segs:[{al:"OD",fn:"161",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7},dep:"DAC",arr:"KUL",depT:"0110",arrT:"0700",eq:"7M8",dur:"3:50"}]}
+  ]},
+  DACDOH: { date:"19MAR", lines:[
+    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"639",classes:{Y:9,C:9,D:9,I:9,R:8,P:6},dep:"DAC",arr:"DOH",depT:"0320",arrT:"0635",eq:"788",dur:"3:15"}]}
+  ]},
+  DOHDXB: { date:"19MAR", lines:[
+    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"1006",classes:{Y:9},dep:"DOH",arr:"DXB",depT:"0800",arrT:"1020",eq:"789",dur:"1:20"}]}
+  ]},
+  DXBDOH: { date:"25MAR", lines:[
+    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"1023",classes:{Y:9},dep:"DXB",arr:"DOH",depT:"1325",arrT:"1340",eq:"359",dur:"1:15"}]}
+  ]},
+  DOHDAC: { date:"25MAR", lines:[
+    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"638",classes:{Y:9},dep:"DOH",arr:"DAC",depT:"1755",arrT:"0150+1",eq:"788",dur:"5:55"}]}
+  ]},
+  DACCCU: { date:"22NOV", lines:[
+    {line:1, segs:[
+      {al:"AI",fn:"2184",classes:{Q:6,C:7,D:6,J:2,Z:1,R:9,A:9,N:9},dep:"DAC",arr:"BOM",depT:"1145",arrT:"1450",eq:"32N",dur:"3:05"},
+      {al:"AI",fn:"2481",classes:{Q:6},dep:"BOM",arr:"CCU",depT:"1655",arrT:"1955",eq:"32N",dur:"3:00"}
+    ]}
+  ]},
+  DACKUL: { lines:[
+    {line:1, segs:[{al:"MH",fn:"197",classes:{J:9,C:9,D:9,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9},dep:"DAC",arr:"KUL",depT:"0050",arrT:"0650",eq:"7M8",dur:"4:00"}]},
+    {line:2, segs:[{al:"OD",fn:"161",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,T:7,U:3},dep:"DAC",arr:"KUL",depT:"0110",arrT:"0700",eq:"7M8",dur:"3:50"}]},
+    {line:3, segs:[{al:"MH",fn:"103",classes:{J:9,C:8,D:8,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9},dep:"DAC",arr:"KUL",depT:"1230",arrT:"1840",eq:"7M8",dur:"4:10"}]},
+    {line:4, segs:[{al:"OD",fn:"165",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,U:3},dep:"DAC",arr:"KUL",depT:"2310",arrT:"0500+1",eq:"7M8",dur:"3:50"}]}
+  ]}
+};
+
+// Extra destinations so students have ~20-25 airports to search from DAC.
+// These are built from the academy's own airport/airline code list, but the
+// schedules/times below are illustrative placeholders, NOT pulled from a real
+// screenshot — flagged with `generic:true` so the terminal can say so.
+const GENERIC_DEST = [
+  {code:"JED", al:"SV", fn:"804", depT:"1600", arrT:"1930",    dur:"6:30",  eq:"777"},
+  {code:"RUH", al:"SV", fn:"808", depT:"0200", arrT:"0525",    dur:"6:25",  eq:"320"},
+  {code:"MED", al:"SV", fn:"812", depT:"2100", arrT:"0130+1",  dur:"6:30",  eq:"738"},
+  {code:"BKK", al:"BG", fn:"088", depT:"0930", arrT:"1430",    dur:"3:00",  eq:"788"},
+  {code:"IST", al:"TK", fn:"714", depT:"0200", arrT:"0715",    dur:"8:15",  eq:"77W"},
+  {code:"LHR", al:"BG", fn:"202", depT:"2330", arrT:"0600+1",  dur:"9:30",  eq:"788"},
+  {code:"DEL", al:"AI", fn:"230", depT:"1030", arrT:"1230",    dur:"2:00",  eq:"320"},
+  {code:"BOM", al:"AI", fn:"238", depT:"1300", arrT:"1600",    dur:"3:00",  eq:"320"},
+  {code:"KTM", al:"BG", fn:"070", depT:"0800", arrT:"0930",    dur:"1:30",  eq:"738"},
+  {code:"HKG", al:"CX", fn:"612", depT:"1000", arrT:"1530",    dur:"3:30",  eq:"333"},
+  {code:"CAN", al:"CZ", fn:"360", depT:"0900", arrT:"1500",    dur:"3:00",  eq:"321"},
+  {code:"PEK", al:"MU", fn:"780", depT:"0700", arrT:"1400",    dur:"4:00",  eq:"333"},
+  {code:"AUH", al:"EY", fn:"606", depT:"0300", arrT:"0530",    dur:"5:30",  eq:"789"},
+  {code:"BAH", al:"GF", fn:"071", depT:"0400", arrT:"0730",    dur:"6:30",  eq:"320"},
+  {code:"KWI", al:"KU", fn:"228", depT:"0300", arrT:"0630",    dur:"6:30",  eq:"320"},
+  {code:"SHJ", al:"FZ", fn:"557", depT:"0900", arrT:"1230",    dur:"5:30",  eq:"73H"},
+  {code:"MLE", al:"BG", fn:"095", depT:"1000", arrT:"1230",    dur:"3:30",  eq:"738"},
+  {code:"CDG", al:"AF", fn:"216", depT:"0100", arrT:"0800",    dur:"10:00", eq:"359"},
+  {code:"MAN", al:"BG", fn:"008", depT:"2200", arrT:"0530+1",  dur:"10:30", eq:"788"}
+];
+GENERIC_DEST.forEach(d=>{
+  FLIGHTS["DAC"+d.code] = { generic:true, lines:[
+    {line:1, segs:[{al:d.al, fn:d.fn, classes:{Y:9,B:9,M:9,K:9,Q:9,H:9,L:9,T:9},
+      dep:"DAC", arr:d.code, depT:d.depT, arrT:d.arrT, eq:d.eq, dur:d.dur}]}
+  ]};
+});
+
+// ---------- Session state ----------
+let state = {
+  lastRoute:null,
+  segments:[],      // {al,fn,cls,count,dep,arr,depT,arrT,dur,eq,date,status}
+  name:null,
+  phone:null,
+  received:null,
+  ticketing:null,
+  finalized:false,
+  locator:null,
+  savedPNRs:{}       // by locator and by surname
+};
+
+const term = document.getElementById('term');
+const pnrStatusEl = document.getElementById('pnrStatus');
+
+function esc(s){ return (s+"").replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function printRaw(html){
+  const d = document.createElement('div');
+  d.className = 'out';
+  d.innerHTML = html;
+  term.appendChild(d);
+  term.scrollTop = term.scrollHeight;
+}
+function printLines(lines, cls){
+  printRaw(lines.map(l => `<div class="line ${cls||''}">${l}</div>`).join(''));
+}
+function printPromptEcho(cmd){
+  printRaw(`<div class="line prompt-line"><span class="chevron">&gt;</span> ${esc(cmd)}</div>`);
+}
+
+function updateStatusBar(){
+  if(!state.segments.length){ pnrStatusEl.textContent = "No active PNR"; return; }
+  pnrStatusEl.textContent = state.finalized
+    ? `PNR ${state.locator} — HK confirmed`
+    : `Building PNR — ${state.segments.length} segment(s), not yet finalized`;
+}
+
+// ---------- Helpers ----------
+function findRouteData(orig, dest){
+  return FLIGHTS[orig+dest] || null;
+}
+function fmtSeg(idx, seg, status){
+  const clsCount = seg.count;
+  return `${idx}  <span class="al">${seg.al} ${seg.fn}</span>  ${seg.cls}${status}${clsCount}  `+
+    `${seg.date} E  ${seg.dep}${seg.arr}  ${seg.depT} ${seg.arrT}  ${seg.eq}`;
+}
+function renderPNR(header){
+  const rows = [];
+  if(header) rows.push(header);
+  let idx = 1;
+  if(state.name){
+    rows.push(`<span class="name">${idx}</span>.<span class="name">${esc(state.name)}</span>`);
+    idx++;
+  }
+  state.segments.forEach(seg=>{
+    rows.push(fmtSeg(idx, seg, seg.status)); idx++;
+  });
+  if(state.phone){ rows.push(`${idx}  AP ${esc(state.phone)}`); idx++; }
+  if(state.ticketing){ rows.push(`${idx}  TK ${esc(state.ticketing)}`); idx++; }
+  if(state.finalized){
+    rows.push(`${idx}  SSR OTHS 1A ${randDigits(9)} - FARE RULE OVERRIDES TKT DEADLINE IF MORE RESTRICTIVE`); idx++;
+    rows.push(`${idx}  OPC-${randDate()}:0541/1C8/${dominantAirline()} CANCELLATION DUE TO NO TICKET DAC TIME ZONE/TKT/S2-${state.segments.length}`); idx++;
+  }
+  printLines(rows, '');
+}
+function dominantAirline(){
+  return (state.segments[0] && state.segments[0].al) || "XX";
+}
+function randDigits(n){ let s=''; for(let i=0;i<n;i++) s+=Math.floor(Math.random()*10); return s; }
+function randDate(){ return "11NOV"; }
+function randLocator(){
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=''; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+// ---------- Command handlers ----------
+function handleAN(cmd, isDirect){
+  const m = cmd.match(/^(AN|AD)(\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})(?:\/([A-Z0-9]+))?$/i);
+  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
+  const [, , date, orig, dest, filter] = m;
+  const route = findRouteData(orig.toUpperCase(), dest.toUpperCase());
+  if(!route){
+    printLines([`NO FLIGHTS FOUND FOR ${orig.toUpperCase()}${dest.toUpperCase()} — try a seeded route (see right panel)`], 'err');
+    return;
+  }
+  state.lastRoute = {orig:orig.toUpperCase(), dest:dest.toUpperCase(), date};
+  const header = `** AMADEUS AVAILABILITY - ${isDirect?"AD":"AN"} ** ${dest.toUpperCase()} ${date}`;
+  const rows = [header];
+  if(route.generic){
+    rows.push(`<span class="muted">(practice data for this route — not yet checked against a live screenshot)</span>`);
+  }
+  route.lines.forEach(line=>{
+    if(filter && !line.segs.some(s=>s.al.toUpperCase()===filter.toUpperCase())) return;
+    line.segs.forEach((seg, i)=>{
+      const clsStr = Object.entries(seg.classes).map(([c,n])=>`${c}${n}`).join(' ');
+      const num = i===0 ? line.line : '';
+      rows.push(`${num}  <span class="al">${seg.al} ${seg.fn}</span>  ${clsStr}   /${seg.dep} ${seg.arr}  ${seg.depT} ${seg.arrT}  ${seg.eq}  ${seg.dur}`);
+    });
+  });
+  printLines(rows, '');
+}
+
+function handleSS(cmd){
+  const m = cmd.match(/^SS(\d+)([A-Z]+)(\d+)$/i);
+  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
+  const [, countStr, cls, lineStr] = m;
+  const count = parseInt(countStr,10);
+  const lineNum = parseInt(lineStr,10);
+  if(cls.length !== 1){ printLines(["CHECK CLASS OF SERVICE"], 'err'); return; }
+  if(!state.lastRoute){ printLines(["NO ACTIVE AVAILABILITY DISPLAY — run an AN search first"], 'err'); return; }
+  const route = findRouteData(state.lastRoute.orig, state.lastRoute.dest);
+  const line = route.lines.find(l=>l.line===lineNum);
+  if(!line){ printLines(["INVALID LINE NUMBER"], 'err'); return; }
+  if(line.forceError){
+    const msgs = line.segs.map(s=>`${s.al} ${s.fn} ${s.classes[cls.toUpperCase()]!==undefined?cls.toUpperCase():'O'} ${state.lastRoute.date} 2 ${s.dep}${s.arr} ${line.forceError}`);
+    printLines(msgs, 'err');
+    return;
+  }
+  const classKey = cls.toUpperCase();
+  const notInClass = line.segs.some(s => s.classes[classKey]===undefined);
+  if(notInClass){ printLines(["CHECK CLASS OF SERVICE"], 'err'); return; }
+  if(line.phantom){
+    const seg0 = line.segs[0];
+    printLines([`${seg0.al} ${seg0.fn} ${classKey} ${state.lastRoute.date} 7 ${seg0.dep}${seg0.arr} NOT AVAILABLE AND WAITLIST CLOSED`], 'err');
+    // auto fallback to AD display
+    handleAN(`AD${state.lastRoute.date}${state.lastRoute.orig}${state.lastRoute.dest}`, true);
+    return;
+  }
+  // success — add all segs in this line to PNR with DK status
+  line.segs.forEach(seg=>{
+    state.segments.push({
+      al:seg.al, fn:seg.fn, cls:classKey, count:count,
+      dep:seg.dep, arr:seg.arr, depT:seg.depT, arrT:seg.arrT,
+      eq:seg.eq, date:state.lastRoute.date, status:"DK"
+    });
+  });
+  updateStatusBar();
+  renderPNR(`RP/${OFFICE_ID}/`);
+}
+
+function handleNM(cmd){
+  const m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+)$/i);
+  if(!m){ printLines(["INVALID FORMAT — try NM1SURNAME/FIRST NAME MR"], 'err'); return; }
+  state.name = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()}`;
+  updateStatusBar();
+  renderPNR(`RP/${OFFICE_ID}/`);
+  if(!state.phone){ printLines(["*** NHP ***"], 'warn'); }
+}
+
+function handleAP(cmd){
+  const m = cmd.match(/^AP\s+(.+)$/i);
+  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
+  state.phone = m[1].trim();
+  renderPNR(`RP/${OFFICE_ID}/`);
+}
+
+function handleTK(cmd){
+  const isTL = /^TKTL/i.test(cmd);
+  state.ticketing = isTL ? `TL${randDate()}/${OFFICE_ID}` : `OK${randDate()}/${OFFICE_ID}`;
+  renderPNR(`RP/${OFFICE_ID}/`);
+}
+
+function handleRF(cmd){
+  state.received = cmd;
+  const hasQR = state.segments.some(s=>s.al==="QR");
+  const rows = [];
+  rows.push("WARNING: SECURE FLT PASSENGER DATA REQUIRED FOR TICKETING PAX 1");
+  if(hasQR){
+    rows.push("WARNING: MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT");
+    rows.push("       FOR QR");
+  }
+  printLines(rows, 'warn');
+}
+
+function finalize(){
+  if(!state.segments.length){ printLines(["NO SEGMENTS TO FINALIZE"], 'err'); return; }
+  if(!state.finalized){
+    state.locator = randLocator();
+    state.segments.forEach(s=> s.status = "HK");
+    state.finalized = true;
+    state.savedPNRs[state.locator] = JSON.parse(JSON.stringify(state));
+    if(state.name){
+      const surname = state.name.split('/')[0];
+      state.savedPNRs["NAME:"+surname] = state.locator;
+    }
+  }
+  updateStatusBar();
+  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU  ${new Date().toISOString().slice(0,10)}   <span class="locator">${state.locator}</span>`);
+}
+
+function handleRT(cmd){
+  let m = cmd.match(/^RT\/([A-Z ]+)$/i);
+  if(m){
+    const key = "NAME:"+m[1].trim().toUpperCase();
+    const locator = state.savedPNRs[key];
+    if(!locator){ printLines(["NO MATCH — RETRIEVE BY NAME FAILED"], 'err'); return; }
+    loadPNR(locator);
+    return;
+  }
+  m = cmd.match(/^RT([A-Z0-9]{6})$/i);
+  if(m){
+    loadPNR(m[1].toUpperCase());
+    return;
+  }
+  printLines(["INVALID FORMAT — try RT[locator] or RT/SURNAME"], 'err');
+}
+function loadPNR(locator){
+  const saved = state.savedPNRs[locator];
+  if(!saved){ printLines(["RECORD LOCATOR NOT FOUND"], 'err'); return; }
+  state = JSON.parse(JSON.stringify(saved));
+  updateStatusBar();
+  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU   <span class="locator">${state.locator}</span>`);
+}
+
+function handleXI(){
+  if(!state.segments.length){ printLines(["NO PNR TO CANCEL"], 'err'); return; }
+  state.segments = [];
+  state.finalized = false;
+  state.locator = null;
+  updateStatusBar();
+  renderPNR(`--- RLR ---`);
+}
+
+function handleIR(){
+  if(!state.finalized){ printLines(["NOTHING TO REDISPLAY — FINALIZE WITH ER FIRST"], 'err'); return; }
+  renderPNR(`--- RLR ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU   <span class="locator">${state.locator}</span>`);
+}
+
+function handleEmail(cmd){
+  const m = cmd.match(/^(?:IEP-EML-|ITR-EML-)(.+)$/i);
+  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
+  printLines([`ITINERARY EMAIL SENT to ${m[1].trim()}`], '');
+}
+
+function handleFXD(){
+  printLines(["OFFICE RESTRICTED"], 'err');
+}
+
+// ---------- Router ----------
+function runCommand(raw){
+  const cmd = raw.trim();
+  if(!cmd) return;
+  printPromptEcho(cmd);
+  const upper = cmd.toUpperCase();
+
+  if(/^A[ND]\d{2}[A-Z]{3}[A-Z]{3}[A-Z]{3}(\/[A-Z0-9]+)?$/i.test(upper)) return handleAN(upper, upper.startsWith("AD"));
+  if(/^SS\d+[A-Z]+\d+$/i.test(upper)) return handleSS(upper);
+  if(/^NM1/i.test(upper)) return handleNM(upper);
+  if(/^AP\s/i.test(upper)) return handleAP(cmd);
+  if(/^TK(TL|OK)/i.test(upper)) return handleTK(upper);
+  if(/^RF\S*;ER$/i.test(upper)) return handleRF(upper);
+  if(upper === "ER") return finalize();
+  if(upper === "IR") return handleIR();
+  if(/^RT/i.test(upper)) return handleRT(upper);
+  if(upper === "XI") return handleXI();
+  if(/^(IEP-EML-|ITR-EML-)/i.test(upper)) return handleEmail(cmd);
+  if(/^FXD/i.test(upper)) return handleFXD();
+
+  printLines(["FORMAT — command not recognised in this prototype yet"], 'err');
+}
+
+// ---------- Input wiring ----------
+function mountInput(){
+  const row = document.createElement('div');
+  row.className = 'inputRow';
+  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" spellcheck="false" placeholder="Enter a command...">`;
+  term.appendChild(row);
+  const input = row.querySelector('#cmdInput');
+  input.focus();
+  input.addEventListener('keydown', e=>{
+    if(e.key === 'Enter'){
+      const val = input.value;
+      input.value = '';
+      row.remove();
+      runCommand(val);
+      mountInput();
+    }
+  });
+  term.addEventListener('click', ()=> input.focus());
+}
+mountInput();
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  location.reload();
+});
+
+// On phones, start with the help panel collapsed so the terminal (and keyboard) get the space.
+const helpPanel = document.getElementById('helpPanel');
+const helpToggleBtn = document.getElementById('helpToggleBtn');
+function isMobileWidth(){ return window.innerWidth <= 760; }
+if(isMobileWidth()) helpPanel.classList.add('collapsed');
+helpToggleBtn.addEventListener('click', ()=>{
+  helpPanel.classList.toggle('collapsed');
+});
+</script>
+</body>
+</html>
