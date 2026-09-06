@@ -30,7 +30,6 @@
 <div class="phishing-banner">
   <div><b>Beware of phishing scams</b> &nbsp;|&nbsp; Amadeus Selling Platform Connect Training Environment</div>
   <div style="cursor:pointer;" onclick="this.parentElement.style.display='none'">✕</div>
-</div>play='none'">âœ•</div>
 </div>
 
 <!-- 3. Sub Action Bar -->
@@ -87,6 +86,8 @@
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('TQT')" title="Ticket Quote Table (Display TST)">TQT</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('XI')" title="Cancel PNR">XI</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('MD')" title="Move Down">MD</button>
+      <button type="button" class="smart-btn active-key" onclick="runSmartCmd('DM1')" title="Display Minimum Connecting Time (Transit Time)">DM1</button>
+      <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FXR')" title="Fare Quote Best Buy with Rebook (FXR)">FXR</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FXB')" title="Best Buy Pricing with Rebook">FXB</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FPINV')" title="Form of Payment Invoice">FPINV</button>
       <button type="button" class="smart-btn highlight-key" onclick="runSmartCmd('TTP')" title="Issue Electronic Ticket">TTP</button>
@@ -100,25 +101,25 @@
   <div class="goto-sidebar">
     <div class="goto-header">
       <span>Go To</span>
-      <span>â–²</span>
+      <span>▲</span>
     </div>
     <div class="goto-section">
       <div class="goto-title">Show in Graphic Mode</div>
       <div class="graphic-icons">
         <div class="graphic-btn" onclick="openSeatMap(0)" title="Open Graphic Seat Map for Flight">
-          <span style="font-size:16px;">âœˆï¸</span>
+          <span style="font-size:16px;">✈</span>
           <span>Seat Map</span>
         </div>
         <div class="graphic-btn" onclick="alert('Hotel booking simulator available in module 2')" title="Hotels">
-          <span style="font-size:16px;">ðŸ¨</span>
+          <span style="font-size:16px;">🏨</span>
           <span>Hotels</span>
         </div>
         <div class="graphic-btn" onclick="alert('Car rental simulator available in module 2')" title="Cars">
-          <span style="font-size:16px;">ðŸš—</span>
+          <span style="font-size:16px;">🚗</span>
           <span>Cars</span>
         </div>
       </div>
-      <div class="goto-link">More Products â–¾</div>
+      <div class="goto-link">More Products ▾</div>
       <div class="goto-link" onclick="handleIR()">Show booking file (IR)</div>
     </div>
 
@@ -130,45 +131,48 @@
     <div class="goto-section">
       <div class="goto-title">Training Shortcuts</div>
       <button class="quick-pnr-btn" onclick="loadLessonPNR()">
-        <span>ðŸ”</span> Load Lesson PNR (J99GZO)
+        <span>🔍</span> Load Lesson PNR (J99GZO)
       </button>
       <button class="quick-pnr-btn" style="background:#4338ca; color:#fff; border-color:#3730a3; margin-top:4px;" onclick="loadThaiAirwaysPNR()">
-        <span>âœˆï¸</span> Load TG Thai PNR (OGJZJ9)
+        <span>✈</span> Load TG Thai PNR (OGJZJ9)
       </button>
       <button class="quick-pnr-btn" style="background:#0f766e; color:#fff; border-color:#115e59; margin-top:4px;" onclick="loadJhonyPNR()">
-        <span>ðŸŽ«</span> Load Jhony PNR (ICRBPO)
+        <span>🎫</span> Load Jhony PNR (ICRBPO)
       </button>
       <button class="quick-pnr-btn secondary" onclick="openSeatMap(0)">
-        <span>ðŸ’º</span> Open Seat Map (TK 713)
+        <span>💺</span> Open Seat Map (TK 713)
       </button>
       <button class="quick-pnr-btn secondary" onclick="resetSimulator()">
-        <span>â†º</span> Reset Simulator
+        <span>↺</span> Reset Simulator
       </button>
     </div>
 
     <div class="goto-section">
       <div class="goto-title">Pricing &amp; Ticketing (TST / Issue)</div>
       <div style="font-size:11px; line-height:1.6; color:#475569;">
-        <button class="quick-pnr-btn" style="background:#0284c7; color:#fff; border-color:#0369a1; margin-bottom:4px;" onclick="runSmartCmd('FXB')">
-          <span>ðŸ’°</span> FXB â€” Price &amp; Store TST (Best Buy)
+        <button class="quick-pnr-btn" style="background:#0284c7; color:#fff; border-color:#0369a1; margin-bottom:4px;" onclick="runSmartCmd('FXR')">
+          <span>💰</span> FXR — Best Buy with Rebook
+        </button>
+        <button class="quick-pnr-btn" style="background:#0369a1; color:#fff; border-color:#075985; margin-bottom:4px;" onclick="runSmartCmd('FXB')">
+          <span>💰</span> FXB — Price &amp; Store TST
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('TQT')">
-          <span>ðŸ“Š</span> TQT â€” Display Ticket Quote Table
+          <span>📊</span> TQT — Display Ticket Quote Table
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('FM7')">
-          <span>ðŸ’¼</span> FM7 â€” Commission 7% (Screenshot 1)
+          <span>💼</span> FM7 — Commission 7%
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('FPINV')">
-          <span>ðŸ“</span> FPINV â€” Form of Payment (Invoice)
+          <span>📄</span> FPINV — Form of Payment (Invoice)
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('TKOK')">
-          <span>âœ”ï¸</span> TKOK â€” Ticketing Status OK
+          <span>✔</span> TKOK — Ticketing Status OK
         </button>
         <button class="quick-pnr-btn secondary" style="margin-bottom:4px;" onclick="runSmartCmd('TKTL')">
-          <span>â³</span> TKTL â€” Ticketing Time Limit
+          <span>⏳</span> TKTL — Ticketing Time Limit
         </button>
         <button class="quick-pnr-btn" style="background:#15803d; color:#fff; border-color:#166534;" onclick="runSmartCmd('TTP')">
-          <span>ðŸŽŸï¸</span> TTP â€” Issue Electronic Ticket
+          <span>🎟</span> TTP — Issue Electronic Ticket
         </button>
       </div>
     </div>
@@ -177,20 +181,20 @@
       <div class="goto-title">Special Services (SR)</div>
       <div style="font-size:11px; line-height:1.6; color:#475569;">
         <b style="color:#005a9c;">Meal Codes Lookup:</b><br>
-        <code>HE/MEAL</code> â€” Meal Codes Index (Screenshot 1)<br>
-        <code>MS22</code> â€” Meal Codes in SSR List (Screenshot 2)<br>
+        <code>HE/MEAL</code> — Meal Codes Index<br>
+        <code>MS22</code> — Meal Codes in SSR List<br>
         <br>
         <b style="color:#005a9c;">Meal Requests:</b><br>
-        <code>SRMOML/P2</code> â€” Muslim Meal (Screenshot 3 & 4)<br>
-        <code>SRCHML/P2</code> â€” Child Meal<br>
-        <code>SRBBML/P3</code> â€” Baby Meal<br>
-        <code>SRBSCT/P3</code> â€” Bassinet (à¦¶à¦¿à¦¶à§à¦° cot)<br>
-        <code>SRVGML/P1</code> â€” Vegetarian Meal<br>
+        <code>SRMOML/P2</code> — Muslim Meal<br>
+        <code>SRCHML/P2</code> — Child Meal<br>
+        <code>SRBBML/P3</code> — Baby Meal<br>
+        <code>SRBSCT/P3</code> — Bassinet (শিশুর cot)<br>
+        <code>SRVGML/P1</code> — Vegetarian Meal<br>
         <br>
         <b style="color:#005a9c;">Wheelchair:</b><br>
         <code>SR WCHR-NONMEDA/ELDERLY UNABLE TO WALK LONG DISTANCE/P1</code><br>
-        <code>SR WCHS/P1</code> â€” Wheelchair to Seat<br>
-        <code>SR WCHC/P1</code> â€” Completely Immobile<br>
+        <code>SR WCHS/P1</code> — Wheelchair to Seat<br>
+        <code>SR WCHC/P1</code> — Completely Immobile<br>
         <br>
         <b style="color:#005a9c;">Contact SSR:</b><br>
         <code>SRCTCE TK HK1-email/P1</code><br>
@@ -203,11 +207,11 @@
         <code>SRDOCS QR HK1-P-BGD-AP3476898-BGD-19OCT90-M-23OCT23-KHAN-ARAFAT</code> (Adult)<br>
         <code>SRDOCS QR HK1-P-BGD-BP1234567-BGD-15MAY15-M-14MAY25-KHAN-TAHMID/P2</code> (Child)<br>
         <code>SRDOCS QR HK1-P-BGD-CP9876543-BGD-10JAN24-MI-09JAN29-KHAN-ZAYAN/P1</code> (Infant)<br>
-        <code>RFR</code> à¦¬à¦¾ <code>RF R</code> â€” Received From<br>
-        <code>ER</code> à¦¬à¦¾ <code>ET</code> â€” End Transaction & Save<br>
+        <code>RFR</code> বা <code>RF R</code> — Received From<br>
+        <code>ER</code> বা <code>ET</code> — End Transaction &amp; Save<br>
         <br>
-        <b style="color:#c2410c;">âš¡ à¦¨à¦¿à¦¯à¦¼à¦®:</b> à¦ªà§à¦°à¦¤à¦¿à¦Ÿà¦¿ SR, OSI à¦¬à¦¾ DOCS à¦•à¦®à¦¾à¦¨à§à¦¡à§‡à¦° à¦ªà¦°à§‡ <b>RFR</b> à¦“ <b>ER</b> (à¦…à¦¥à¦¬à¦¾ <b>IR</b>) à¦Ÿà¦¾à¦‡à¦ª à¦•à¦°à§‡ à¦°à¦¿à¦¸à¦¿à¦­/à¦¸à§‡à¦­ à¦•à¦°à¦¤à§‡ à¦¹à¦¬à§‡à¥¤<br>
-        <code>MD</code> â€” More Display (à¦ªà¦°à§‡à¦° à¦²à¦¾à¦‡à¦¨à¦—à§à¦²à§‹ à¦¦à§‡à¦–à¦¤à§‡)
+        <b style="color:#c2410c;">⚡ নিয়ম:</b> প্রতিটি SR, OSI বা DOCS কমান্ডের পরে <b>RFR</b> ও <b>ER</b> (অথবা <b>IR</b>) টাইপ করে রিসিভ/সেভ করতে হবে।<br>
+        <code>MD</code> — More Display (পরের লাইনগুলো দেখতে)
       </div>
     </div>
 

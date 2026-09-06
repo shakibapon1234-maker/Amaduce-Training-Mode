@@ -747,15 +747,17 @@ let lastANDate = "12NOV";
 
 function handleAN(cmd, isDirect){
   const clean = cmd.replace(/\s+/g, '');
-  const m = clean.match(/^(AN|AD)(\d{1,2}[A-Z]{3})?([A-Z]{3})([A-Z]{3})(?:\/([A-Z0-9]+))?$/i);
+  const m = clean.match(/^(AN|AD)(\d{1,2}[A-Z]{3})?([A-Z]{2,3})([A-Z]{2,3})(?:\/([A-Z0-9]+))?$/i);
   if(!m){
-    printLines(["INVALID FORMAT â€” e.g. AN12NOVDACBKK, AN12NOVDACNRT, or AN25MARDACDXB"], 'err');
+    printLines(["INVALID FORMAT — e.g. AN12NOVDACBKK, AN12NOVDACNRT, or AN25MARDACDXB"], 'err');
     return;
   }
   const [, type, dateRaw, orig, dest, filter] = m;
   const date = (dateRaw || "12NOV").toUpperCase();
-  const o = orig.toUpperCase();
-  const d = dest.toUpperCase();
+  let o = orig.toUpperCase();
+  let d = dest.toUpperCase();
+  if(o === 'XB') o = 'DXB';
+  if(d === 'XB') d = 'DXB';
 
   const route = getFlightSchedule(o, d, date);
   if(!route || !route.lines || !route.lines.length){
@@ -765,7 +767,7 @@ function handleAN(cmd, isDirect){
   lastANRoute = route;
   lastANDate = date;
 
-  const header = `** AMADEUS AVAILABILITY - ${isDirect ? "AD" : "AN"} ** ${d} ${date}`;
+  const header = `** AMADEUS AVAILABILITY - ${isDirect ? "AD" : "AN"} ** ${o} ${date}`;
   const rows = [header];
 
   const alFilter = filter ? filter.toUpperCase().replace(/^A/, '') : null;
@@ -792,7 +794,7 @@ function handleSS(cmd){
   const clean = cmd.replace(/\s+/g, '');
   const m = clean.match(/^SS(\d+)([A-Z]+)(\d+)(\*)?$/i);
   if(!m){
-    printLines(["INVALID FORMAT â€” try SS1Y1, SS1T1, or SS2K2"], 'err');
+    printLines(["INVALID FORMAT — try SS1Y1, SS1T1, or SS2K2"], 'err');
     return;
   }
   const count = parseInt(m[1], 10);
@@ -807,8 +809,8 @@ function handleSS(cmd){
     return;
   }
 
-  // If previous PNR was finalized or active, start fresh for a new hold
-  if(state.finalized || (state.locator && state.segments.length)){
+  // If previous PNR was finalized or active with a saved locator, reset workspace for new holding
+  if(state.finalized || (state.locator && state.locator === "J99GZO" && state.passengers.length > 0)){
     state.locator = null;
     state.passengers = [];
     state.segments = [];
@@ -819,6 +821,8 @@ function handleSS(cmd){
     state.specialSSRs = [];
     state.osiEntries = [];
     state.seats = {};
+    state.tstRecords = [];
+    state.hasTST = false;
   }
 
   const heldDate = lastANDate || line.segs[0].date || "12NOV";
@@ -841,16 +845,18 @@ function handleSS(cmd){
     tktCode: `${s.al}/VB7BHH`
   }));
 
-  state.segments = newSegs;
+  // Append segments for Roundtrip / Multi-City (আপ-ডাউন একসাথে)
+  if(!state.segments) state.segments = [];
+  state.segments = state.segments.concat(newSegs);
 
-  // Real Amadeus Holding Display (matches YouTube Screenshot 2 exactly)
+  // Real Amadeus Holding Display (matches YouTube Screenshot 2 & 5)
   const rows = [];
-  rows.push(`RP/${OFFICE_ID}/`);
+  rows.push(`RP/${state.officeId || OFFICE_ID}/`);
 
   state.segments.forEach((seg, idx) => {
     const sNum = (idx + 1).toString().padStart(2, ' ');
     const stopCol = (state.segments.length > 1) ? `    ${idx + 1} ` : '      ';
-    rows.push(`${sNum}  <span class="al">${seg.al} ${seg.fn}</span> ${seg.cls} ${seg.date} ${seg.day} ${seg.dep}${seg.arr} ${seg.status}${seg.count}${stopCol} ${seg.depT} ${seg.arrT}  ${seg.eq} E 0 M`);
+    rows.push(`${sNum}  <span class="al">${seg.al}  ${seg.fn.padEnd(4, ' ')}</span> ${seg.cls} ${seg.date} ${seg.day} ${seg.dep}${seg.arr} ${seg.status}${seg.count}${stopCol} ${seg.depT} ${seg.arrT}  ${seg.eq} E 0 M`);
     rows.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
     rows.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
     rows.push(`    STARLINK ENABLED`);
@@ -859,7 +865,7 @@ function handleSS(cmd){
 
   printLines(rows, '');
   updateTopPnrInfo();
-  showToast(`âœ“ Held ${count} seat(s) on ${newSegs.map(s => s.al + ' ' + s.fn).join(', ')} (Status: HK${count})`);
+  showToast(`✓ Held ${count} seat(s) on ${newSegs.map(s => s.al + ' ' + s.fn).join(', ')} (Status: HK${count})`);
 }
 
 function handleNM(cmd){
@@ -1037,11 +1043,41 @@ function handleRT(cmd){
   const loc = (cmd||'').replace(/^RT\s*/i, '').trim().toUpperCase();
   if(loc === 'OGJZJ9' || loc === 'TG'){
     loadThaiAirwaysPNR();
-  } else if(loc === 'ICRBPO' || loc === 'JHONY' || loc === 'BG'){
-    loadJhonyPNR();
-  } else {
-    loadLessonPNR();
+    return;
   }
+  if(loc === 'ICRBPO' || loc === 'JHONY' || loc === 'BG'){
+    loadJhonyPNR();
+    return;
+  }
+  if(loc && loc !== 'J99GZO' && loc !== state.locator){
+    printLines([`NO RECORD LOCATOR FOUND FOR ${loc}`], 'err');
+    return;
+  }
+
+  // Plain RT: Display current active workspace / PNR
+  if(state.segments && state.segments.length){
+    if(state.passengers && state.passengers.length){
+      renderPNR();
+    } else {
+      // In-progress itinerary display (matching Screenshot 4)
+      const rows = [];
+      const off = state.officeId || OFFICE_ID;
+      rows.push(`RP/${off}/`);
+      state.segments.forEach((seg, idx) => {
+        const sNum = (idx + 1).toString().padStart(2, ' ');
+        const stopCol = (state.segments.length > 1) ? `    ${idx + 1} ` : '      ';
+        rows.push(`${sNum}  <span class="al">${seg.al}  ${seg.fn.padEnd(4, ' ')}</span> ${seg.cls} ${seg.date} ${seg.day || '3'} ${seg.dep}${seg.arr} ${seg.status || 'HK'}${seg.count || 1}${stopCol} ${seg.depT} ${seg.arrT}   ${seg.eq || '77W'} E 0 M`);
+        rows.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
+        rows.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
+        rows.push(`    STARLINK ENABLED`);
+        rows.push(`    SEE RTSVC`);
+      });
+      printLines(rows, '');
+    }
+    return;
+  }
+
+  loadLessonPNR();
 }
 
 function handleXI(){
@@ -1410,65 +1446,180 @@ function handleNameModify(cmd){
   showToast(`âœ“ Name modified: P${paxNum} â†’ ${newSurname}/${newFirst} â€” Type IR to display updated PNR`);
 }
 
-// ---------- FXB / FXP / FXX â€” Pricing & TST Creation (Screenshot 1) ----------
-function handleFXB(cmd){
-  if(!state.locator){
-    loadLessonPNR();
+// ---------- DM / DM1 — Display Minimum Connecting Time / Transit Time (Screenshot 1) ----------
+function handleDM(cmd){
+  const clean = (cmd || 'DM1').replace(/\s+/g, '').toUpperCase();
+  const m = clean.match(/^DM(\d+)?/i);
+  const segIdx = (m && m[1]) ? parseInt(m[1], 10) : 1;
+
+  let seg1 = null;
+  let seg2 = null;
+
+  if(state.segments && state.segments.length >= 2){
+    seg1 = state.segments[segIdx - 1] || state.segments[0];
+    seg2 = state.segments[segIdx] || state.segments[1];
+  } else if(lastANRoute && lastANRoute.lines){
+    const connLine = lastANRoute.lines.find(l => l.segs && l.segs.length >= 2) || lastANRoute.lines[0];
+    if(connLine && connLine.segs && connLine.segs.length >= 2){
+      seg1 = connLine.segs[0];
+      seg2 = connLine.segs[1];
+    }
   }
-  state.hasTST = true;
+
+  if(!seg1 || !seg2){
+    seg1 = { al: "QR", fn: "639", dep: "DAC", arr: "DOH", arrT: "0620" };
+    seg2 = { al: "QR", fn: "828", dep: "DOH", arr: "BKK", depT: "0725" };
+  }
+
+  const transit = seg1.arr || "DOH";
+  const arrClean = (seg1.arrT || "0620").replace(/[^0-9]/g, '').padEnd(4, '0').slice(0, 4);
+  const depClean = (seg2.depT || "0725").replace(/[^0-9]/g, '').padEnd(4, '0').slice(0, 4);
+
+  const arrMin = parseInt(arrClean.slice(0, 2), 10) * 60 + parseInt(arrClean.slice(2, 4), 10);
+  let depMin = parseInt(depClean.slice(0, 2), 10) * 60 + parseInt(depClean.slice(2, 4), 10);
+
+  if(depMin < arrMin || (seg1.arrT && seg1.arrT.includes('+')) || (seg2.depT && seg2.depT.includes('+'))){
+    depMin += 24 * 60;
+  }
+  const diff = depMin - arrMin;
+  const hours = Math.floor(diff / 60);
+  const mins = diff % 60;
+  const connTimeStr = String(hours).padStart(2, '0') + String(mins).padStart(2, '0');
+
+  const al1 = seg1.al;
+  const al2 = seg2.al;
 
   const rows = [
-    `ITINERARY REBOOKED`,
-    `  PASSENGER       PTC   NP  FARE&lt;BDT&gt; TAX/FEE   PER PSGR`
+    `DM${segIdx}`,
+    `${transit}-${transit}       FROM      -       TO`,
+    `CC FLTN-FLTR ORGN EQP TM CS-CC FLTN-FLTR DEST EQP TM CS       HHMM`,
+    `${al1.padEnd(27, ' ')}-${al2.padEnd(32, ' ')}I/I:0045`,
+    `ACTUAL CONNECTING TIME IS ${connTimeStr}`
+  ];
+
+  printLines(rows, '');
+  showToast(`✓ Actual connecting time at ${transit}: ${hours}h ${mins}m (${connTimeStr})`);
+}
+
+// ---------- FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3) ----------
+function handlePricing(cmd){
+  const upper = (cmd || 'FXR').toUpperCase().trim();
+  const isRebook = (/^FX[RB]/i.test(upper)); // FXR and FXB rebook to lowest class
+
+  // Rebook segment classes to 'N' (lowest economy promotional class)
+  if(isRebook && state.segments && state.segments.length){
+    state.segments.forEach(s => {
+      s.cls = 'N';
+      s.rebooked = true;
+    });
+  }
+
+  state.hasTST = true;
+  state.hasPending = true;
+
+  const hasPax = state.passengers && state.passengers.length > 0;
+
+  // If FXR command OR no passenger names entered yet (matching Screenshot 2 & 3)
+  if(upper.startsWith("FXR") || !hasPax){
+    const segs = (state.segments && state.segments.length) ? state.segments : [
+      { al:"QR", fn:"639", cls:"N", date:"20MAY", dep:"DAC", arr:"DOH", depT:"0410", arrT:"0620" },
+      { al:"QR", fn:"828", cls:"N", date:"20MAY", dep:"DOH", arr:"BKK", depT:"0725", arrT:"1820" }
+    ];
+
+    const rows = [
+      upper,
+      ``,
+      `01 P1`,
+      isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
+      `LAST TKT DTE 19MAY26/23:59 LT in POS - SEE ADV PURCHASE`,
+      `------------------------------------------------------------`,
+      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`
+    ];
+
+    segs.forEach((s, idx) => {
+      if(idx === 0) {
+        rows.push(` ${s.dep}`);
+      }
+      const prefix = (idx > 0) ? `X${s.dep}`.padEnd(5, ' ') : '     ';
+      const bkCol = isRebook ? `${s.cls} *${s.cls}` : `${s.cls}  ${s.cls}`;
+      const fBasis = `${s.cls}JR4R1RI`.padEnd(16, ' ');
+      rows.push(`${prefix} ${s.al.padEnd(3, ' ')}  ${s.fn.padStart(4, ' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis} ${s.date}       25`);
+      if(idx === segs.length - 1){
+        rows.push(` ${s.arr}`);
+      }
+    });
+
+    const origCity = segs[0].dep;
+    const destCity = segs[segs.length - 1].arr;
+    const alCode = segs[0].al;
+    const dateStr = segs[0].date;
+    const viaCode = segs.length > 1 ? ` X/${segs[0].arr}` : '';
+
+    rows.push(``);
+    rows.push(` USD  1068.00       ${dateStr}26${origCity} ${alCode}${viaCode} ${alCode} ${destCity}1068.00NUC`);
+    rows.push(` BDT   131055       1068.00END ROE1.00`);
+    rows.push(` BDT      500-BD    XT BDT 2500-OW BDT 1228-P7 BDT 1228-P8 BDT`);
+    rows.push(` BDT      444-E5    4000-UT BDT 2022-G4 BDT 184-PZ BDT 2022-QA`);
+    rows.push(` BDT    13754-XT    BDT 337-R9 BDT 136-E7 BDT 97-G8`);
+    rows.push(` BDT   145753`);
+    rows.push(` RATE USED 1USD=122.71BDT`);
+    rows.push(` FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
+    rows.push(` FARE FAMILY:FC1:1-2:ECLASSIC`);
+    rows.push(` FXU/TS TO UPSELL ECONVENIEN FOR 6626BDT`);
+    rows.push(`>                                                    PAGE  2/ 3`);
+
+    state.tstRecords = [
+      { tstNum: 1, pCode: '.1', name: 'PAX 1', fare: 131055, tax: 14698, total: 145753, ptc: 'ADT', segs: `1-${segs.length}` }
+    ];
+
+    printLines(rows, '');
+    showToast(`✓ Best Buy Quoted (${upper}) — Rebooked to class ${segs[0].cls} — Type RT to view`);
+    return;
+  }
+
+  // Multi-passenger PNR table (e.g. Thai Airways / Turkish Airlines with existing names)
+  const rows = [
+    isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
+    `  PASSENGER       PTC   NP  FARE<BDT> TAX/FEE   PER PSGR`
   ];
 
   let totalNP = 0;
   let totalFare = 0;
   let totalTax = 0;
   let grandTotal = 0;
-
   state.tstRecords = [];
 
-  // Determine passengers in current PNR
-  const paxList = (state.passengers && state.passengers.length) ? state.passengers : [
-    { type: 'child', label: 'AHMED/KARIM MSTR(CHD/01FEB14)' },
-    { type: 'adult', label: 'AHMED/SHAMIMA MRS' },
-    { type: 'infantCarrier', label: 'AHMED/SHAMIMA MRS(INFAHMED/TAHERA MISS/19JAN18)', infant: { surname:'AHMED', first:'TAHERA', title:'MISS' } }
-  ];
-
   let lineNo = 1;
-  paxList.forEach((p, i)=>{
+  state.passengers.forEach((p, i)=>{
     if(p.type === 'child'){
       const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
       const shortName = rawName.slice(0, 14).padEnd(14, ' ');
       rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  CH     1     13529     6084      19613`);
       totalNP += 1; totalFare += 13529; totalTax += 6084; grandTotal += 19613;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 6084, total: 19613, ptc: 'CH', segs: '3-4' });
+      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 6084, total: 19613, ptc: 'CH', segs: '1-2' });
       lineNo++;
     } else if(p.type === 'adult' || !p.type){
       const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
       const shortName = rawName.slice(0, 14).padEnd(14, ' ');
       rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
       totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '3-4' });
+      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
       lineNo++;
     } else if(p.type === 'infantCarrier'){
-      // Adult carrier
       const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
       const shortName = rawName.slice(0, 14).padEnd(14, ' ');
       rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
       totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '3-4' });
+      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
       lineNo++;
 
-      // Infant
       const infSurname = p.infant ? p.infant.surname : 'AHMED';
       const infFirst = p.infant ? p.infant.first : 'TAHER';
       const infName = `${infSurname}/${infFirst}*`;
       const shortInf = infName.slice(0, 14).padEnd(14, ' ');
       rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortInf}  IN     1      6640      252       6892`);
       totalNP += 1; totalFare += 6640; totalTax += 252; grandTotal += 6892;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1} I`, name: `${infSurname}/${infFirst} MISS(INF)`, fare: 6640, tax: 252, total: 6892, ptc: 'IN', segs: '3-4' });
+      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1} I`, name: `${infSurname}/${infFirst} MISS(INF)`, fare: 6640, tax: 252, total: 6892, ptc: 'IN', segs: '1-2' });
       lineNo++;
     }
   });
@@ -1482,9 +1633,8 @@ function handleFXB(cmd){
   rows.push(`1-2 TICKETS ARE NON-REFUNDABLE`);
   rows.push(`                                    PAGE   2/ 2`);
 
-  state.hasPending = true;
   printLines(rows, '');
-  showToast(`âœ… Best Buy Quoted (FXB) â€” TST Stored for ${totalNP} passenger(s) â€” Type TQT to view`);
+  showToast(`✅ Best Buy Quoted (${upper}) — TST Stored for ${totalNP} passenger(s) — Type TQT to view`);
 }
 
 // ---------- TQT â€” Ticket Quote Table / Display TST (Screenshot 3) ----------
@@ -1912,28 +2062,31 @@ function runCommand(raw){
   // OSI VIP / MEDA / informational notes
   if(/^OSI\s+/i.test(upper)) return handleOSI(upper);
 
-  // FXB / FXP / FXX â€” Pricing & TST Creation (Screenshot 1)
-  if(upper === "FXB" || upper === "FXP" || upper === "FXX") return handleFXB(upper);
+  // DM / DM1 — Display Minimum Connecting Time / Transit Time (Screenshot 1)
+  if(/^DM\d*/i.test(clean)) return handleDM(upper);
 
-  // TQT â€” Ticket Quote Table / Display TST (Screenshot 3)
+  // FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3)
+  if(/^FX[RBPX]/i.test(clean)) return handlePricing(upper);
+
+  // TQT — Ticket Quote Table / Display TST (Screenshot 3)
   if(/^TQT(\/T\d+)?$/i.test(upper)) return handleTQT(upper);
 
-  // FPINV / FP ... â€” Form of Payment (Screenshot 4)
+  // FPINV / FP ... — Form of Payment (Screenshot 4)
   if(/^FP\s*/i.test(upper) || /^FPINV/i.test(upper)) return handleFP(cmd);
 
-  // TTP â€” Issue Electronic Ticket (Issue Entry)
+  // TTP — Issue Electronic Ticket (Issue Entry)
   if(/^TTP(\/\S+)?$/i.test(upper)) return handleTTP(upper);
 
-  // ---------- NAME MODIFY â€” Two real Amadeus formats ----------
+  // ---------- NAME MODIFY — Two real Amadeus formats ----------
   // Format 1: NU1HAMED/MAHMOUD  (NU + pax number + new name)
   // Format 2: 1/MOUSSA/MAHMOUD  (pax number + / + surname + / + firstname)
   if(/^NU\d+[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
   if(/^\d+\/[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
 
-  // XE â€” Delete SSR / DOCS / OSI entry (XE10 or XEMOML or XESRDOCS/P1)
+  // XE — Delete SSR / DOCS / OSI entry (XE10 or XEMOML or XESRDOCS/P1)
   if(/^XE/i.test(upper)) return handleXE(upper);
 
-  printLines([`FORMAT â€” command not recognised. Try: HE/MEAL Â· MS22 Â· SRMOML/P2 Â· ER Â· FXB Â· TQT Â· FPINV Â· TTP Â· NU1NAME/FIRST Â· XE10 Â· XEMOML Â· XESRDOCS/P1`], 'err');
+  printLines([`FORMAT - command not recognised. Try: DM1 · FXR · FXB · RT · HE/MEAL · MS22 · SRMOML/P2 · ER · TQT · FPINV · TTP · NU1NAME/FIRST · XE10`], 'err');
 }
 
 function mountInput(){

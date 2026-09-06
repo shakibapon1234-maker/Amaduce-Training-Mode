@@ -176,66 +176,73 @@ function getFlightSchedule(orig, dest, date){
     };
   }
 
-  // 4. DAC-DXB (Dubai): 8 Real Flights
+  // 4. DAC-DXB (Dubai) & Return (DXB-DAC): 8 Real Flights
   if(key === "DACDXB" || revKey === "DACDXB"){
+    const isRev = (key !== "DACDXB");
+    const [cOrig, cDest] = isRev ? ["DXB", "DAC"] : ["DAC", "DXB"];
+    const [cShjOrig, cShjDest] = isRev ? ["SHJ", "DAC"] : ["DAC", "SHJ"];
     return {
       date: dt,
       lines: [
-        { line:1, segs:[{ al:"EK", fn:"585", classes:STD_CLS_FULL, dep:"DAC", arr:"DXB", depT:"0100", arrT:"0425", eq:"77W", dur:"5:25" }] },
-        { line:2, segs:[{ al:"FZ", fn:"502", classes:STD_CLS_ECO, dep:"DAC", arr:"DXB", depT:"0805", arrT:"1155", eq:"7M8", dur:"5:50" }] },
-        { line:3, segs:[{ al:"EK", fn:"583", classes:STD_CLS_FULL, dep:"DAC", arr:"DXB", depT:"0955", arrT:"1320", eq:"77W", dur:"5:25" }] },
-        { line:4, segs:[{ al:"BG", fn:"047", classes:STD_CLS_FULL, dep:"DAC", arr:"DXB", depT:"1715", arrT:"2100", eq:"788", dur:"5:45" }] },
-        { line:5, segs:[{ al:"BS", fn:"341", classes:STD_CLS_ECO, dep:"DAC", arr:"DXB", depT:"1830", arrT:"2210", eq:"738", dur:"5:40" }] },
-        { line:6, segs:[{ al:"EK", fn:"587", classes:STD_CLS_FULL, dep:"DAC", arr:"DXB", depT:"1845", arrT:"2215", eq:"77W", dur:"5:30" }] },
-        { line:7, segs:[{ al:"FZ", fn:"524", classes:STD_CLS_ECO, dep:"DAC", arr:"DXB", depT:"2140", arrT:"0130+1", eq:"7M8", dur:"5:50" }] },
-        { line:8, segs:[{ al:"G9", fn:"512", classes:STD_CLS_ECO, dep:"DAC", arr:"SHJ", depT:"2110", arrT:"0045+1", eq:"321", dur:"5:35" }] }
+        { line:1, segs:[{ al:"EK", fn: isRev?"586":"585", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"1030":"0100", arrT: isRev?"1655":"0425", eq:"77W", dur:"5:25" }] },
+        { line:2, segs:[{ al:"FZ", fn: isRev?"501":"502", classes:STD_CLS_ECO, dep:cOrig, arr:cDest, depT: isRev?"0155":"0805", arrT: isRev?"0845":"1155", eq:"7M8", dur:"5:50" }] },
+        { line:3, segs:[{ al:"EK", fn: isRev?"582":"583", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"0215":"0955", arrT: isRev?"0840":"1320", eq:"77W", dur:"5:25" }] },
+        { line:4, segs:[{ al:"BG", fn: isRev?"048":"047", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"2300":"1715", arrT: isRev?"0545+1":"2100", eq:"788", dur:"5:45" }] },
+        { line:5, segs:[{ al:"BS", fn: isRev?"342":"341", classes:STD_CLS_ECO, dep:cOrig, arr:cDest, depT: isRev?"2340":"1830", arrT: isRev?"0620+1":"2210", eq:"738", dur:"5:40" }] },
+        { line:6, segs:[{ al:"EK", fn: isRev?"584":"587", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"1300":"1845", arrT: isRev?"1925":"2215", eq:"77W", dur:"5:30" }] },
+        { line:7, segs:[{ al:"FZ", fn: isRev?"523":"524", classes:STD_CLS_ECO, dep:cOrig, arr:cDest, depT: isRev?"1420":"2140", arrT: isRev?"2100":"0130+1", eq:"7M8", dur:"5:50" }] },
+        { line:8, segs:[{ al:"G9", fn: isRev?"511":"512", classes:STD_CLS_ECO, dep:cShjOrig, arr:cShjDest, depT: isRev?"1455":"2110", arrT: isRev?"2140":"0045+1", eq:"321", dur:"5:35" }] }
       ]
     };
   }
 
-  // 5. DAC-IST (Istanbul): 6 Real Flights
+  // 5. DAC-IST (Istanbul) & Return (IST-DAC): 6 Real Flights
   if(key === "DACIST" || revKey === "DACIST"){
+    const isRev = (key !== "DACIST");
+    const [cOrig, cDest] = isRev ? ["IST", "DAC"] : ["DAC", "IST"];
     return {
       date: dt,
       lines: [
-        { line:1, segs:[{ al:"TK", fn:"713", classes:STD_CLS_FULL, dep:"DAC", arr:"IST", depT:"0655", arrT:"1325", eq:"77W", dur:"8:30" }] },
-        { line:2, segs:[{ al:"TK", fn:"715", classes:STD_CLS_FULL, dep:"DAC", arr:"IST", depT:"2205", arrT:"0435+1", eq:"789", dur:"8:30" }] },
+        { line:1, segs:[{ al:"TK", fn: isRev?"712":"713", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"1835":"0655", arrT: isRev?"0500+1":"1325", eq:"77W", dur:"8:30" }] },
+        { line:2, segs:[{ al:"TK", fn: isRev?"714":"715", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"0800":"2205", arrT: isRev?"1630":"0435+1", eq:"789", dur:"8:30" }] },
         { line:3, segs:[
-          { al:"QR", fn:"639", classes:STD_CLS_FULL, dep:"DAC", arr:"DOH", depT:"0410", arrT:"0620", eq:"77W", dur:"3:10" },
-          { al:"QR", fn:"239", classes:STD_CLS_FULL, dep:"DOH", arr:"IST", depT:"0845", arrT:"1320", eq:"359", dur:"4:35" }
+          { al:"QR", fn: isRev?"240":"639", classes:STD_CLS_FULL, dep:cOrig, arr:"DOH", depT: isRev?"1430":"0410", arrT: isRev?"1845":"0620", eq:"359", dur:"4:15" },
+          { al:"QR", fn: isRev?"638":"239", classes:STD_CLS_FULL, dep:"DOH", arr:cDest, depT: isRev?"2015":"0845", arrT: isRev?"0330+1":"1320", eq:"77W", dur:"4:15" }
         ]},
         { line:4, segs:[
-          { al:"EK", fn:"583", classes:STD_CLS_FULL, dep:"DAC", arr:"DXB", depT:"0955", arrT:"1320", eq:"77W", dur:"5:25" },
-          { al:"EK", fn:"121", classes:STD_CLS_FULL, dep:"DXB", arr:"IST", depT:"1420", arrT:"1815", eq:"77W", dur:"4:55" }
+          { al:"EK", fn: isRev?"122":"583", classes:STD_CLS_FULL, dep:cOrig, arr:"DXB", depT: isRev?"1925":"0955", arrT: isRev?"0100+1":"1320", eq:"77W", dur:"4:35" },
+          { al:"EK", fn: isRev?"582":"121", classes:STD_CLS_FULL, dep:"DXB", arr:cDest, depT: isRev?"0215":"1420", arrT: isRev?"0840":"1815", eq:"77W", dur:"4:25" }
         ]},
         { line:5, segs:[
-          { al:"GF", fn:"251", classes:STD_CLS_ECO, dep:"DAC", arr:"BAH", depT:"0540", arrT:"0835", eq:"789", dur:"5:55" },
-          { al:"GF", fn:"043", classes:STD_CLS_ECO, dep:"BAH", arr:"IST", depT:"1005", arrT:"1440", eq:"321", dur:"4:35" }
+          { al:"GF", fn: isRev?"044":"251", classes:STD_CLS_ECO, dep:cOrig, arr:"BAH", depT: isRev?"1530":"0540", arrT: isRev?"1945":"0835", eq:"321", dur:"4:15" },
+          { al:"GF", fn: isRev?"250":"043", classes:STD_CLS_ECO, dep:"BAH", arr:cDest, depT: isRev?"2100":"1005", arrT: isRev?"0430+1":"1440", eq:"789", dur:"4:30" }
         ]},
         { line:6, segs:[
-          { al:"KU", fn:"284", classes:STD_CLS_ECO, dep:"DAC", arr:"KWI", depT:"0315", arrT:"0630", eq:"77W", dur:"5:15" },
-          { al:"KU", fn:"153", classes:STD_CLS_ECO, dep:"KWI", arr:"IST", depT:"0940", arrT:"1350", eq:"320", dur:"4:10" }
+          { al:"KU", fn: isRev?"154":"284", classes:STD_CLS_ECO, dep:cOrig, arr:"KWI", depT: isRev?"1450":"0315", arrT: isRev?"1835":"0630", eq:"320", dur:"3:45" },
+          { al:"KU", fn: isRev?"283":"153", classes:STD_CLS_ECO, dep:"KWI", arr:cDest, depT: isRev?"2015":"0940", arrT: isRev?"0410+1":"1350", eq:"77W", dur:"4:55" }
         ]}
       ]
     };
   }
 
-  // 6. DAC-SIN (Singapore): 6 Real Flights
+  // 6. DAC-SIN (Singapore) & Return (SIN-DAC): 6 Real Flights
   if(key === "DACSIN" || revKey === "DACSIN"){
+    const isRev = (key !== "DACSIN");
+    const [cOrig, cDest] = isRev ? ["SIN", "DAC"] : ["DAC", "SIN"];
     return {
       date: dt,
       lines: [
-        { line:1, segs:[{ al:"SQ", fn:"447", classes:STD_CLS_FULL, dep:"DAC", arr:"SIN", depT:"2355", arrT:"0605+1", eq:"787", dur:"4:10" }] },
-        { line:2, segs:[{ al:"SQ", fn:"421", classes:STD_CLS_FULL, dep:"DAC", arr:"SIN", depT:"0013", arrT:"0615", eq:"787", dur:"4:02" }] },
-        { line:3, segs:[{ al:"BG", fn:"555", classes:STD_CLS_FULL, dep:"DAC", arr:"SIN", depT:"1659", arrT:"2100", eq:"739", dur:"4:01" }] },
-        { line:4, segs:[{ al:"BS", fn:"563", classes:STD_CLS_ECO, dep:"DAC", arr:"SIN", depT:"1700", arrT:"2100", eq:"738", dur:"4:00" }] },
+        { line:1, segs:[{ al:"SQ", fn: isRev?"446":"447", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"2035":"2355", arrT: isRev?"2240":"0605+1", eq:"787", dur:"4:05" }] },
+        { line:2, segs:[{ al:"SQ", fn: isRev?"420":"421", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"0745":"0013", arrT: isRev?"0950":"0615", eq:"787", dur:"4:05" }] },
+        { line:3, segs:[{ al:"BG", fn: isRev?"556":"555", classes:STD_CLS_FULL, dep:cOrig, arr:cDest, depT: isRev?"2200":"1659", arrT: isRev?"0005+1":"2100", eq:"739", dur:"4:05" }] },
+        { line:4, segs:[{ al:"BS", fn: isRev?"564":"563", classes:STD_CLS_ECO, dep:cOrig, arr:cDest, depT: isRev?"2200":"1700", arrT: isRev?"0010+1":"2100", eq:"738", dur:"4:10" }] },
         { line:5, segs:[
-          { al:"MH", fn:"197", classes:STD_CLS_FULL, dep:"DAC", arr:"KUL", depT:"0050", arrT:"0650", eq:"7M8", dur:"4:00" },
-          { al:"MH", fn:"603", classes:STD_CLS_FULL, dep:"KUL", arr:"SIN", depT:"0830", arrT:"0935", eq:"738", dur:"1:05" }
+          { al:"MH", fn: isRev?"604":"197", classes:STD_CLS_FULL, dep:cOrig, arr:"KUL", depT: isRev?"1015":"0050", arrT: isRev?"1120":"0650", eq:"738", dur:"1:05" },
+          { al:"MH", fn: isRev?"196":"603", classes:STD_CLS_FULL, dep:"KUL", arr:cDest, depT: isRev?"1300":"0830", arrT: isRev?"1505":"0935", eq:"7M8", dur:"4:05" }
         ]},
         { line:6, segs:[
-          { al:"TG", fn:"322", classes:STD_CLS_FULL, dep:"DAC", arr:"BKK", depT:"1335", arrT:"1700", eq:"777", dur:"2:25" },
-          { al:"TG", fn:"409", classes:STD_CLS_FULL, dep:"BKK", arr:"SIN", depT:"1940", arrT:"2250", eq:"359", dur:"2:10" }
+          { al:"TG", fn: isRev?"410":"322", classes:STD_CLS_FULL, dep:cOrig, arr:"BKK", depT: isRev?"1215":"1335", arrT: isRev?"1340":"1700", eq:"359", dur:"2:25" },
+          { al:"TG", fn: isRev?"321":"409", classes:STD_CLS_FULL, dep:"BKK", arr:cDest, depT: isRev?"1035":"1940", arrT: isRev?"1210":"2250", eq:"777", dur:"2:35" }
         ]}
       ]
     };
