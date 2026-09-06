@@ -3,151 +3,1243 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>WFA Amadeus Practice Simulator</title>
+<title>Amadeus Selling Platform Connect — Training Simulator</title>
 <style>
-  :root{
-    --ink:#0a0a0a;
-    --blue:#0033cc;
-    --red:#b30000;
-    --magenta:#a3007a;
-    --grey:#6b6b6b;
-    --border:#d8d8d8;
+  :root {
+    --amad-blue: #005a9c;
+    --amad-dark-blue: #003366;
+    --amad-nav-bg: #004d80;
+    --amad-light-blue: #e6f0fa;
+    --amad-accent: #0077c8;
+    --amad-pink: #f8d7da;
+    --amad-pink-border: #f5c6cb;
+    --amad-pink-text: #721c24;
+    --term-bg: #ffffff;
+    --term-text: #000000;
+    --seat-bg: #f2f5f9;
+    --seat-border: #99b8dc;
+    --seat-dollar: #005a9c;
+    --seat-occ-bg: #e2e4e8;
+    --seat-occ-border: #b0b4ba;
+    --seat-sel-bg: #005a9c;
+    --seat-sel-text: #ffffff;
+    --border-color: #d1d5db;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; font-family:Consolas, "Courier New", monospace;
-    background:#eef0f3; color:var(--ink);
-  }
-  .topbar{
-    background:#003399; color:#fff; padding:10px 16px;
-    display:flex; justify-content:space-between; align-items:center; gap:10px;
-    font-family:Arial, sans-serif; flex-wrap:wrap;
-  }
-  .topbar .brand{ font-weight:700; letter-spacing:.5px; font-size:14px; }
-  .topbar .disclaimer{ font-size:11px; opacity:.85; text-align:right; max-width:520px; }
-  .toolbar{
-    background:#f4f5f7; border-bottom:1px solid var(--border);
-    padding:6px 16px; font-family:Arial, sans-serif; font-size:12px; color:#333;
-    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-  }
-  .toolbar button{
-    font-family:Arial, sans-serif; font-size:13px; padding:6px 12px;
-    border:1px solid #bbb; background:#fff; border-radius:3px; cursor:pointer;
-  }
-  .toolbar button:hover{ background:#f0f0f0; }
-  .wrap{ display:flex; height:calc(100vh - 84px); min-height:0; }
-  .term{
-    flex:1; background:#ffffff; padding:14px 16px; overflow-y:auto;
-    font-size:14px; line-height:1.45; -webkit-overflow-scrolling:touch;
-  }
-  .help{
-    width:280px; flex-shrink:0; background:#fafafa; border-left:1px solid var(--border);
-    padding:14px; overflow-y:auto; font-family:Arial, sans-serif; font-size:12.5px; color:#333;
-  }
-  .help h3{ font-size:13px; margin:14px 0 6px; color:#003399; }
-  .help h3:first-child{ margin-top:0; }
-  .help code{ background:#eee; padding:1px 4px; border-radius:2px; word-break:break-word; }
 
-  /* --- Mobile / narrow screens --- */
-  @media (max-width: 760px){
-    .topbar{ padding:8px 10px; }
-    .topbar .brand{ font-size:13px; }
-    .topbar .disclaimer{ display:none; }
-    .toolbar{ padding:6px 10px; font-size:11px; }
-    .wrap{ flex-direction:column; height:auto; min-height:calc(100vh - 84px); }
-    .term{ font-size:13px; padding:10px 10px 6px; order:1; }
-    .help{
-      width:auto; border-left:none; border-top:1px solid var(--border);
-      order:2; max-height:38vh;
-    }
-    .help.collapsed{ display:none; }
-    .inputRow input{ font-size:16px; } /* prevents auto-zoom on mobile keyboards */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #eef2f5;
+    color: #333333;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
   }
-  .line{ white-space:pre-wrap; word-break:break-word; }
-  .prompt-line{ color:var(--ink); }
-  .prompt-line .chevron{ color:var(--grey); }
-  .out{ margin:2px 0 10px 0; }
-  .err{ color:var(--red); }
-  .warn{ color:#a35a00; }
-  .name{ color:var(--magenta); font-weight:700; }
-  .al{ color:var(--blue); font-weight:700; }
-  .locator{ color:var(--blue); font-weight:700; }
-  .muted{ color:var(--grey); }
-  .inputRow{ display:flex; align-items:center; gap:6px; margin-top:4px; }
-  .inputRow .chevron{ color:var(--grey); }
-  .inputRow input{
-    flex:1; border:none; outline:none; font-family:inherit; font-size:14px;
-    background:transparent; color:var(--ink);
+
+  /* --- Topmost Amadeus Nav Bar --- */
+  .amad-header {
+    background: #00437a;
+    color: #ffffff;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    font-size: 13px;
+    flex-shrink: 0;
+    user-select: none;
   }
-  .footer{
-    font-family:Arial, sans-serif; font-size:11px; color:#888; background:#f4f5f7;
-    border-top:1px solid var(--border); padding:5px 16px;
+  .amad-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .amad-logo {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .amad-logo span {
+    font-size: 10px;
+    background: #0077c8;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .amad-nav-item {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12.5px;
+    padding: 4px 6px;
+    border-radius: 3px;
+  }
+  .amad-nav-item:hover { background: rgba(255,255,255,0.15); }
+  .amad-header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .search-box {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    padding: 4px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .search-box input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 12px;
+    width: 210px;
+  }
+  .search-box input::placeholder { color: rgba(255,255,255,0.7); }
+  .user-badge {
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* --- Warning Pink Banner --- */
+  .phishing-banner {
+    background: #f75d7b;
+    color: #ffffff;
+    font-size: 11.5px;
+    padding: 3px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .phishing-banner b { font-weight: 700; }
+
+  /* --- Sub-action Bar --- */
+  .action-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #d0d7de;
+    padding: 5px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .new-cmd-btn {
+    background: #005a9c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .action-input-wrap {
+    flex: 1;
+    position: relative;
+    max-width: 480px;
+  }
+  .action-input-wrap input {
+    width: 100%;
+    padding: 5px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    font-size: 12px;
+    outline: none;
+  }
+  .action-bar-pnr-info {
+    color: #475569;
+    font-size: 11.5px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* --- Command Page Header / Tabs --- */
+  .page-header-tabs {
+    background: #f1f5f9;
+    border-bottom: 1px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+  .page-tab-active {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-bottom: 1px solid #ffffff;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #0f172a;
+    border-radius: 4px 4px 0 0;
+    margin-bottom: -1px;
+  }
+  .page-tab-close {
+    font-size: 12px;
+    cursor: pointer;
+    color: #64748b;
+  }
+  .page-tab-close:hover { color: #000; }
+  .page-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11.5px;
+    color: #64748b;
+  }
+  .tool-icon {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+  .tool-icon:hover { background: #e2e8f0; color: #0f172a; }
+
+  /* --- Main Container: Split into Left Workspace & Right Go-To Panel --- */
+  .main-container {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* --- Terminal View --- */
+  .terminal-view {
+    flex: 1;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .term-scroll {
+    flex: 1;
+    padding: 12px 18px;
+    overflow-y: auto;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #000;
+  }
+  .term-scroll::-webkit-scrollbar { width: 8px; }
+  .term-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .line { white-space: pre-wrap; word-break: break-word; }
+  .prompt-line { color: #000; font-weight: bold; }
+  .prompt-line .chevron { color: #64748b; margin-right: 4px; }
+  .out { margin: 2px 0 10px 0; }
+  .err { color: #b91c1c; font-weight: bold; }
+  .warn { color: #b45309; }
+  .name { color: #86198f; font-weight: 700; }
+  .al { color: #0033cc; font-weight: 700; }
+  .locator { color: #0033cc; font-weight: 700; }
+  .muted { color: #64748b; }
+
+  /* Interactive booking class link inside PNR lines */
+  .seg-class-link {
+    color: #0033cc;
+    font-weight: 800;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0 3px;
+    border-radius: 3px;
+    display: inline-block;
+    transition: all 0.15s;
+    background: #f0f4ff;
+    border: 1px dashed #7ea5e0;
+  }
+  .seg-class-link:hover {
+    background: #0033cc;
+    color: #ffffff;
+    border-color: #0033cc;
+    box-shadow: 0 0 6px rgba(0,51,204,0.4);
+    transform: scale(1.05);
+  }
+  .seg-class-hint {
+    font-size: 11px;
+    font-family: Arial, sans-serif;
+    color: #0284c7;
+    margin-left: 8px;
+    font-style: italic;
+  }
+
+  .inputRow { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+  .inputRow .chevron { color: #64748b; font-weight: bold; }
+  .inputRow input {
+    flex: 1; border: none; outline: none; font-family: inherit; font-size: 14px;
+    background: transparent; color: #000; font-weight: bold;
+  }
+
+  /* --- Right Sidebar "Go To" --- */
+  .goto-sidebar {
+    width: 250px;
+    background: #f8fafc;
+    border-left: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    font-size: 12px;
+    overflow-y: auto;
+  }
+  .goto-header {
+    background: #e2e8f0;
+    padding: 8px 12px;
+    font-weight: 700;
+    color: #334155;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #cbd5e1;
+  }
+  .goto-section {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .goto-title {
+    color: #005a9c;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 11.5px;
+  }
+  .graphic-icons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .graphic-btn {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 4px;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #005a9c;
+    font-weight: 600;
+  }
+  .graphic-btn:hover { background: #e0f2fe; border-color: #0284c7; }
+  .goto-link {
+    color: #005a9c;
+    text-decoration: none;
+    display: block;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .goto-link:hover { text-decoration: underline; }
+  .quick-pnr-btn {
+    width: 100%;
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .quick-pnr-btn:hover { background: #0369a1; }
+  .quick-pnr-btn.secondary {
+    background: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+  }
+  .quick-pnr-btn.secondary:hover { background: #e2e8f0; }
+
+  /* --- SEAT MAP VIEW (Replaces/Overlays Terminal) --- */
+  .seatmap-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 250px; bottom: 0;
+    background: #f8fafc;
+    display: none; /* toggled via JS */
+    flex-direction: column;
+    z-index: 10;
+    overflow: hidden;
+  }
+  .seatmap-overlay.active {
+    display: flex;
+  }
+
+  /* Seat map sub-header */
+  .seatmap-top-bar {
+    background: #ffffff;
+    border-bottom: 1px solid #cbd5e1;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .seatmap-top-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .close-seatmap-link {
+    color: #005a9c;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  .close-seatmap-link:hover { background: #e0f2fe; }
+  .seatmap-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .sm-tab {
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    color: #475569;
+  }
+  .sm-tab.active {
+    color: #005a9c;
+    border-bottom-color: #005a9c;
+  }
+  .seatmap-top-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12.5px;
+  }
+  .segment-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .segment-selector-wrap select {
+    padding: 5px 10px;
+    font-size: 12.5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #0f172a;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+  }
+  .legend-btn {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #005a9c;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .legend-btn:hover { background: #e2e8f0; }
+
+  /* Seat map 2-pane body */
+  .seatmap-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: #f1f5f9;
+  }
+
+  /* Left Pane: Aircraft Cabin */
+  .cabin-pane {
+    flex: 1;
+    background: #ffffff;
+    margin: 12px;
+    margin-right: 6px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+    position: relative;
+  }
+  .cabin-pane::-webkit-scrollbar { width: 8px; }
+  .cabin-pane::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+  /* Aircraft Fuselage styling */
+  .aircraft-fuselage {
+    width: 100%;
+    max-width: 580px;
+    border: 2px solid #94a3b8;
+    border-radius: 90px 90px 20px 20px;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    position: relative;
+    padding: 30px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .cockpit-indicator {
+    position: absolute;
+    top: 8px;
+    font-size: 10px;
+    color: #64748b;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cabin-class-header {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #005a9c;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    text-align: center;
+  }
+  .cabin-columns-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    user-select: none;
+  }
+  .col-label { width: 34px; text-align: center; }
+  .aisle-gap { width: 26px; }
+  .row-num-spacer { width: 28px; }
+
+  /* Rows */
+  .seat-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 6px;
+    user-select: none;
+  }
+  .row-num {
+    width: 28px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-align: center;
+  }
+
+  /* Single Seat Box */
+  .seat-tile {
+    width: 34px;
+    height: 34px;
+    margin: 0 1px;
+    border: 1.5px solid #005a9c;
+    border-radius: 5px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+  .seat-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,90,156,0.25);
+    border-color: #003366;
+  }
+  .seat-tile.dollar {
+    border-color: #005a9c;
+    color: #005a9c;
+    font-weight: 800;
+    font-size: 13px;
+  }
+  .seat-tile.occupied {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #64748b;
+    cursor: not-allowed;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .seat-tile.occupied:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .seat-tile.selected {
+    background: #005a9c;
+    border-color: #003366;
+    color: #ffffff;
+    box-shadow: 0 0 0 2px #38bdf8;
+  }
+  .seat-tile.selected .pax-tag {
+    font-size: 9px;
+    font-weight: 800;
+    background: #ffffff;
+    color: #005a9c;
+    border-radius: 2px;
+    padding: 0 2px;
+    line-height: 1.1;
+  }
+
+  /* Hover Tooltip matching Screenshot 2 */
+  .seat-tooltip {
+    position: fixed;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+    padding: 12px 14px;
+    z-index: 1000;
+    pointer-events: none;
+    width: 220px;
+    display: none;
+    font-family: Arial, sans-serif;
+  }
+  .tooltip-badge {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: #1e293b;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
+  }
+  .tooltip-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 4px;
+    margin-bottom: 2px;
+  }
+  .tooltip-item {
+    font-size: 11px;
+    color: #475569;
+    margin: 1px 0 6px 0;
+  }
+
+  /* Right Pane: Passenger and Flight Details */
+  .details-pane {
+    width: 360px;
+    background: #ffffff;
+    margin: 12px;
+    margin-left: 6px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .details-tabs {
+    display: flex;
+    background: #f8fafc;
+    border-bottom: 1px solid #cbd5e1;
+    flex-shrink: 0;
+  }
+  .dt-tab {
+    flex: 1;
+    text-align: center;
+    padding: 9px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .dt-tab.active {
+    color: #005a9c;
+    border-bottom-color: #005a9c;
+    background: #ffffff;
+  }
+  .details-content {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    font-size: 12px;
+  }
+
+  /* Passengers list table */
+  .pax-table-header {
+    display: flex;
+    align-items: center;
+    padding: 6px 4px 8px;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 700;
+    color: #334155;
+    font-size: 11.5px;
+  }
+  .pax-th-check { width: 24px; }
+  .pax-th-name { flex: 1; }
+  .pax-th-seats { width: 70px; text-align: center; }
+  .pax-th-status { width: 65px; text-align: right; }
+
+  .pax-item-row {
+    display: flex;
+    align-items: center;
+    padding: 10px 4px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 4px;
+  }
+  .pax-item-row:hover { background: #f8fafc; }
+  .pax-item-row.active-pax {
+    background: #e0f2fe;
+    outline: 1px solid #38bdf8;
+  }
+  .pax-check { width: 24px; }
+  .pax-info { flex: 1; }
+  .pax-code { font-weight: 700; color: #005a9c; margin-right: 4px; }
+  .pax-badge-chd {
+    background: #f59e0b;
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin-right: 4px;
+  }
+  .pax-name { font-weight: 600; color: #0f172a; }
+  .pax-seat-code {
+    width: 70px;
+    text-align: center;
+    font-weight: 700;
+    color: #005a9c;
+    font-size: 12px;
+  }
+  .pax-seat-code.empty { color: #94a3b8; font-weight: normal; }
+  .pax-status-text {
+    width: 65px;
+    text-align: right;
+    font-size: 11px;
+    color: #16a34a;
+    font-weight: 600;
+  }
+  .pax-status-text.pending { color: #64748b; font-weight: normal; }
+
+  /* Infant sub row */
+  .infant-sub-row {
+    padding: 4px 4px 6px 28px;
+    font-size: 11px;
+    color: #64748b;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .infant-badge {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  /* Bottom Actions in Details Pane */
+  .details-footer {
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-top: 1px solid #cbd5e1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .price-summary {
+    font-size: 12px;
+    color: #475569;
+    display: flex;
+    justify-content: space-between;
+  }
+  .price-summary b { color: #0f172a; }
+  .book-seats-btn {
+    width: 100%;
+    padding: 8px;
+    background: #005a9c;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .book-seats-btn:hover { background: #00437a; }
+  .book-seats-btn:disabled {
+    background: #cbd5e1;
+    color: #94a3b8;
+    cursor: not-allowed;
+  }
+
+  /* Tab content: Seat Features & Amenities */
+  .tab-pane-content {
+    line-height: 1.5;
+    color: #334155;
+  }
+  .feature-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  .feature-card h4 {
+    margin: 0 0 6px 0;
+    font-size: 12px;
+    color: #005a9c;
+  }
+
+  /* Legend Modal */
+  .legend-modal {
+    position: absolute;
+    top: 50px;
+    right: 20px;
+    width: 280px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    padding: 14px;
+    z-index: 100;
+    display: none;
+    font-size: 12px;
+  }
+  .legend-modal.show { display: block; }
+  .legend-modal h4 {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #0f172a;
+    display: flex;
+    justify-content: space-between;
+  }
+  .legend-close { cursor: pointer; color: #64748b; }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .legend-sample {
+    width: 24px;
+    height: 24px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+
+  /* Confirmation Toast Notification */
+  .toast-notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e293b;
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .toast-notification.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Bottom status bar */
+  .status-footer {
+    background: #f1f5f9;
+    border-top: 1px solid #cbd5e1;
+    padding: 3px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #475569;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .footer-left { display: flex; gap: 14px; align-items: center; }
+  .footer-right { display: flex; gap: 14px; align-items: center; }
+  .help-avatar-badge {
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 900px) {
+    .goto-sidebar { display: none; }
+    .seatmap-overlay { right: 0; }
+    .seatmap-body { flex-direction: column; overflow-y: auto; }
+    .details-pane { width: auto; margin: 6px 12px 12px; }
   }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">WFA &nbsp;|&nbsp; AMADEUS PRACTICE TERMINAL</div>
-  <div class="disclaimer">
-    Independent training simulation built by Wings Fly Aviation Academy for internal lab use.
-    Not affiliated with, endorsed by, or connected to Amadeus IT Group. No live GDS access.
+<!-- 1. Amadeus Top Nav -->
+<div class="amad-header">
+  <div class="amad-header-left">
+    <div class="amad-logo">amadeus <span>TRAINING</span></div>
+    <div class="amad-nav-item">File ▾</div>
+    <div class="amad-nav-item">Smart Flows ▾</div>
+    <div class="amad-nav-item">Apps ▾</div>
+  </div>
+  <div class="amad-header-right">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Search solutions, learning and support">
+    </div>
+    <div class="amad-nav-item">About ▾</div>
+    <div class="user-badge">BAYEZID.S ▾</div>
   </div>
 </div>
 
-<div class="toolbar">
-  <span id="pnrStatus" class="muted">No active PNR</span>
-  <button id="resetBtn">Reset session</button>
-  <button id="helpToggleBtn">Command help</button>
-  <span class="muted">Office ID: WFALAB1</span>
+<!-- 2. Warning Pink Banner -->
+<div class="phishing-banner">
+  <div><b>Beware of phishing scams</b> &nbsp;|&nbsp; Amadeus Selling Platform Connect Training Environment</div>
+  <div style="cursor:pointer;" onclick="this.parentElement.style.display='none'">✕</div>
 </div>
 
-<div class="wrap">
-  <div class="term" id="term">
-    <div class="line muted">Type a command below. Try: <code>AN22NOVDACDXB</code></div>
+<!-- 3. Sub Action Bar -->
+<div class="action-bar">
+  <button class="new-cmd-btn" id="newCmdBtn">
+    <span>&gt;_</span> New command page ▾
+  </button>
+  <div class="action-input-wrap">
+    <input type="text" id="actionSearchInput" placeholder='Enter an action (example: "Retrieve" or "Launch Smart Flow")'>
   </div>
-  <div class="help" id="helpPanel">
-    <h3>Availability</h3>
-    <code>AN[date][orig][dest]</code><br>
-    <code>AN...DACDXB/QR</code> (airline filter)<br>
-    <code>AD[date][orig][dest]</code>
-
-    <h3>Sell</h3>
-    <code>SS[count][class][line]</code><br>e.g. <code>SS1Y2</code>
-
-    <h3>PNR elements</h3>
-    <code>NM1SURNAME/FIRST MR</code> (repeat for each passenger)<br>
-    <code>NM1SURNAME/FIRST MSTR(CHD/DDMMMYY)</code><br>
-    <code>NM1SURNAME/FIRST MS(INF ISURNAME/IFIRST MISS/DDMMMYY)</code><br>
-    <code>AP [contact text]</code><br>
-    <code>SRCTCE [AL] HK1-[email]/P[n]</code><br>
-    <code>SRCTCM [AL] HK1-[phone]/P[n]</code><br>
-    <code>TKTL</code> / <code>TKOK</code><br>
-    <code>RF[code];ER</code>
-
-    <h3>Finish / manage</h3>
-    <code>ER</code> — End Transaction<br>
-    <code>IR</code> — Ignore &amp; Retrieve (redisplay)<br>
-    <code>RT[locator]</code> or <code>RT/SURNAME</code><br>
-    <code>XI</code> — cancel PNR<br>
-    <code>IEP-EML-you@mail.com</code> — email itinerary
-
-    <h3>Try seeded routes</h3>
-    Verified from real screenshots: DACDXB · DACSIN · DACDOH · DOHDXB · DXBDOH · DOHDAC · DACCCU · DACKUL<br><br>
-    Generic practice data: DACJED · DACRUH · DACMED · DACBKK · DACIST · DACLHR · DACDEL · DACBOM · DACKTM · DACHKG · DACCAN · DACPEK · DACAUH · DACBAH · DACKWI · DACSHJ · DACMLE · DACCDG · DACMAN
-
-    <h3>Note</h3>
-    This is an early prototype. Screen formatting is a close approximation, not a pixel-exact copy — command syntax, status codes (DK→HK) and error behavior are the verified parts so far.<br><br>
-    Typing is auto-capitalised (no Shift/Caps Lock needed). Press <b>Alt+↑</b> / <b>Alt+↓</b> to recall previous/next commands, like Sabre.
+  <div class="action-bar-pnr-info">
+    <span id="topPnrStatus" class="muted">PNR: J99GZO (Active)</span>
+    <span>Office ID: <b>DACVS3334</b></span>
   </div>
 </div>
 
-<div class="footer">Session-only — nothing here is saved or sent anywhere. Refresh the page to fully reset.</div>
+<!-- 4. Command Page Header / Tab -->
+<div class="page-header-tabs">
+  <div class="page-tab-active" id="cmdPageTab">
+    <span>📄</span>
+    <span id="tabTitleText">Command page - AHMED MD AMIR MR (3) - 25MAR - IST - J99GZO</span>
+    <span class="page-tab-close" title="Reset Session" onclick="resetSimulator()">✕</span>
+  </div>
+  <div class="page-tools">
+    <span>Owned by <b>DACVS3334</b></span>
+    <span class="tool-icon" title="Command History">🕒</span>
+    <span class="tool-icon" title="Split Screen Horizontal">⬒</span>
+    <span class="tool-icon" title="Split Screen Vertical">⬓</span>
+    <span class="tool-icon" title="Quad View">⊞</span>
+  </div>
+</div>
+
+<!-- 5. Main Area (Terminal + Right Sidebar + Seat Map Overlay) -->
+<div class="main-container">
+
+  <!-- Main Terminal Page -->
+  <div class="terminal-view">
+    <div class="term-scroll" id="term">
+      <!-- Lines rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Right "Go To" Sidebar -->
+  <div class="goto-sidebar">
+    <div class="goto-header">
+      <span>Go To</span>
+      <span>▲</span>
+    </div>
+    <div class="goto-section">
+      <div class="goto-title">Show in Graphic Mode</div>
+      <div class="graphic-icons">
+        <div class="graphic-btn" onclick="openSeatMap(0)" title="Open Graphic Seat Map for Flight">
+          <span style="font-size:16px;">✈️</span>
+          <span>Seat Map</span>
+        </div>
+        <div class="graphic-btn" onclick="alert('Hotel booking simulator available in module 2')" title="Hotels">
+          <span style="font-size:16px;">🏨</span>
+          <span>Hotels</span>
+        </div>
+        <div class="graphic-btn" onclick="alert('Car rental simulator available in module 2')" title="Cars">
+          <span style="font-size:16px;">🚗</span>
+          <span>Cars</span>
+        </div>
+      </div>
+      <div class="goto-link">More Products ▾</div>
+      <div class="goto-link" onclick="handleIR()">Show booking file (IR)</div>
+    </div>
+
+    <div class="goto-section">
+      <div class="goto-title">Quality Monitor</div>
+      <div class="muted" style="font-size:11px;">No Quality Monitor items to check</div>
+    </div>
+
+    <div class="goto-section">
+      <div class="goto-title">Training Shortcuts</div>
+      <button class="quick-pnr-btn" onclick="loadLessonPNR()">
+        <span>🔁</span> Load Lesson PNR (J99GZO)
+      </button>
+      <button class="quick-pnr-btn secondary" onclick="openSeatMap(0)">
+        <span>💺</span> Open Seat Map (TK 713)
+      </button>
+      <button class="quick-pnr-btn secondary" onclick="resetSimulator()">
+        <span>↺</span> Reset Simulator
+      </button>
+    </div>
+
+    <div class="goto-section">
+      <div class="goto-title">Student Help</div>
+      <div style="font-size:11px; line-height:1.4; color:#475569;">
+        • Click any <b>booking class (e.g. Y)</b> on flight lines 4-7 to view the interactive Seat Map.<br><br>
+        • Type Amadeus commands in the prompt below (e.g. <code>AN25MARDACIST</code>, <code>IR</code>, <code>RT J99GZO</code>).
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. SEAT MAP OVERLAY (Amadeus Selling Platform Connect Replica) -->
+  <div class="seatmap-overlay" id="seatmapOverlay">
+    <!-- Top subbar with close button and tabs -->
+    <div class="seatmap-top-bar">
+      <div class="seatmap-top-left">
+        <a class="close-seatmap-link" onclick="closeSeatMap()">
+          <span>&lt;</span> Close seat map
+        </a>
+        <div class="seatmap-tabs">
+          <div class="sm-tab active" id="smTabSeatMap" onclick="switchSmTab('seatmap')">Seat map</div>
+          <div class="sm-tab" id="smTabServices" onclick="switchSmTab('services')">Service catalogue</div>
+        </div>
+      </div>
+      <div class="seatmap-top-right">
+        <div class="segment-selector-wrap">
+          <span>Segment:</span>
+          <select id="segmentSelect" onchange="onSegmentChange(this.value)">
+            <!-- Populated dynamically from segments -->
+          </select>
+        </div>
+        <button class="legend-btn" onclick="toggleLegend()">
+          <span>❓</span> Legend
+        </button>
+      </div>
+    </div>
+
+    <!-- Seat map body: 2 columns -->
+    <div class="seatmap-body">
+      <!-- Left: Aircraft Cabin -->
+      <div class="cabin-pane">
+        <div class="aircraft-fuselage">
+          <div class="cockpit-indicator">▲ COCKPIT / FRONT ▲</div>
+          <div class="cabin-class-header" id="cabinClassHeader">
+            Economy Class — Turkish Airlines (Boeing 777-300ER)
+          </div>
+
+          <!-- Column headers: A B C   D E F   H J K -->
+          <div class="cabin-columns-header">
+            <div class="row-num-spacer"></div>
+            <div class="col-label">A</div>
+            <div class="col-label">B</div>
+            <div class="col-label">C</div>
+            <div class="aisle-gap"></div>
+            <div class="col-label">D</div>
+            <div class="col-label">E</div>
+            <div class="col-label">F</div>
+            <div class="aisle-gap"></div>
+            <div class="col-label">H</div>
+            <div class="col-label">J</div>
+            <div class="col-label">K</div>
+            <div class="row-num-spacer"></div>
+          </div>
+
+          <!-- Seat Rows Container -->
+          <div id="seatRowsContainer" style="width:100%;">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Passenger Selection & Flight Info -->
+      <div class="details-pane">
+        <div class="details-tabs">
+          <div class="dt-tab active" id="dtTabPax" onclick="switchDetailsTab('passengers')">Passengers</div>
+          <div class="dt-tab" id="dtTabFeatures" onclick="switchDetailsTab('features')">Seat features</div>
+          <div class="dt-tab" id="dtTabAmenities" onclick="switchDetailsTab('amenities')">Amenities</div>
+        </div>
+
+        <div class="details-content" id="detailsContent">
+          <!-- Passengers Tab Content -->
+          <div id="paxTabPane">
+            <div class="pax-table-header">
+              <div class="pax-th-check"><input type="checkbox" checked disabled></div>
+              <div class="pax-th-name">Passengers</div>
+              <div class="pax-th-seats">Seats</div>
+              <div class="pax-th-status">Status</div>
+            </div>
+            <div id="paxListContainer">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+          <!-- Seat Features Tab Content -->
+          <div id="featuresTabPane" style="display:none;" class="tab-pane-content">
+            <div class="feature-card">
+              <h4>Standard Economy Seat</h4>
+              <p><b>Pitch:</b> 31 - 32 in (79 - 81 cm)<br>
+              <b>Width:</b> 18 in (46 cm)<br>
+              <b>Recline:</b> 6 in (15 cm)<br>
+              <b>Configuration:</b> 3-3-3 layout with ergonomic 4-way adjustable headrest.</p>
+            </div>
+            <div class="feature-card">
+              <h4>Extra Legroom / Chargeable ($)</h4>
+              <p><b>Pitch:</b> 34 - 36 in (86 - 91 cm)<br>
+              Located at emergency exit rows and front bulkhead (Rows 6-10). Priority disembarkation.</p>
+            </div>
+          </div>
+
+          <!-- Amenities Tab Content -->
+          <div id="amenitiesTabPane" style="display:none;" class="tab-pane-content">
+            <div class="feature-card">
+              <h4>In-Flight Entertainment (IFE)</h4>
+              <p>13.3" HD touch screen with live TV, over 600 movies, games, and noise-reducing headsets.</p>
+            </div>
+            <div class="feature-card">
+              <h4>Power & Connectivity</h4>
+              <p>Universal 110V AC power socket and 5V USB Type-A port at every seat. High-speed satellite Wi-Fi onboard.</p>
+            </div>
+            <div class="feature-card">
+              <h4>Catering & Baggage</h4>
+              <p>Complimentary Turkish Do&Co hot meal with Turkish mezze. 2x 23kg checked bags included.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="details-footer">
+          <div class="price-summary">
+            <span>Price for <span id="selectedSeatsCount">0</span> seat(s) selected:</span>
+            <b>0 USD</b>
+          </div>
+          <button class="book-seats-btn" id="bookSeatsBtn" onclick="confirmBookSeats()">
+            Book Seats
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend Popup -->
+    <div class="legend-modal" id="legendModal">
+      <h4>
+        <span>Seat Map Legend</span>
+        <span class="legend-close" onclick="toggleLegend()">✕</span>
+      </h4>
+      <div class="legend-item">
+        <div class="legend-sample seat-tile dollar">$</div>
+        <span>Chargeable / Preferred seat</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-sample seat-tile"></div>
+        <span>Standard vacant seat</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-sample seat-tile occupied">✕</div>
+        <span>Occupied / Blocked seat</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-sample seat-tile selected" style="color:#fff;">✓</div>
+        <span>Selected seat for passenger</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Hover Tooltip -->
+<div class="seat-tooltip" id="seatTooltip">
+  <div class="tooltip-badge" id="tooltipBadge">06A</div>
+  <div class="tooltip-section-title">Seat Characteristics</div>
+  <div class="tooltip-item" id="tooltipChar">Chargeable seat<br>Leg space seat</div>
+  <div class="tooltip-section-title">Seat Occupation</div>
+  <div class="tooltip-item" id="tooltipOcc">Seat is vacant</div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-notification" id="toastNotification">Seats booked successfully!</div>
+
+<!-- Bottom Status Footer -->
+<div class="status-footer">
+  <div class="footer-left">
+    <span>Main Page</span>
+    <span style="color:#005a9c; font-weight:bold;" id="bottomPaxName">AHMED MD AMIR ...</span>
+  </div>
+  <div class="footer-right">
+    <span>4505 input</span>
+    <span>Line: 1</span>
+    <span>Column: 1</span>
+    <span class="help-avatar-badge">Hi, can I help you? ▲</span>
+    <span>Office ID: <b>DACVS3334</b></span>
+  </div>
+</div>
 
 <script>
-const OFFICE_ID = "WFALAB1";
+const OFFICE_ID = "DACVS3334";
 
-// ---------- Seed flight data (built from verified screenshots) ----------
+// Sample flight database
 const FLIGHTS = {
   DACDXB: { date:"22NOV", lines:[
     {line:1, phantom:true, segs:[{al:"EK",fn:"585",classes:{F:2,A:2,J:4,C:4,I:4,O:7,H:7,Y:7,R:7,X:7,M:7,B:7,U:7,K:7,Q:7,L:7,T:7},dep:"DAC",arr:"DXB",depT:"0100",arrT:"0425",eq:"77W",dur:"5:25"}]},
@@ -157,90 +1249,64 @@ const FLIGHTS = {
     {line:5, phantom:true, segs:[{al:"EK",fn:"587",classes:{J:4,C:4,I:4,O:7,H:7,Y:7,R:7,X:7,M:7,B:7,U:7,K:7,Q:7,L:7,T:7},dep:"DAC",arr:"DXB",depT:"1845",arrT:"2215",eq:"77W",dur:"5:30"}]},
     {line:6, segs:[{al:"FZ",fn:"524",classes:{Y:9,R:9,X:9,M:9,B:9,U:9},dep:"DAC",arr:"DXB",depT:"2140",arrT:"0130+1",eq:"7M8",dur:"5:50"}]}
   ]},
-  DACSIN: { date:"24NOV", lines:[
-    {line:1, segs:[{al:"SQ",fn:"447",classes:{Z:9,C:9,J:9,U:9,D:9,Y:9,B:9},dep:"DAC",arr:"SIN",depT:"2355",arrT:"0600+1",eq:"787",dur:"4:05"}]},
-    {line:2, forceError:"INVALID NUMBER IN PARTY", segs:[
-      {al:"MH",fn:"197",classes:{J:9,C:8,D:8,Z:8,I:2,Y:9,B:9},dep:"DAC",arr:"KUL",depT:"0050",arrT:"0650",eq:"7M8",dur:""},
-      {al:"MH",fn:"601",classes:{J:9,C:9,D:9,Z:8,I:2,Y:9,B:9},dep:"KUL",arr:"SIN",depT:"0750",arrT:"0905",eq:"7M8",dur:""}
-    ]},
-    {line:3, segs:[{al:"OD",fn:"161",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7},dep:"DAC",arr:"KUL",depT:"0110",arrT:"0700",eq:"7M8",dur:"3:50"}]}
-  ]},
-  DACDOH: { date:"19MAR", lines:[
-    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"639",classes:{Y:9,C:9,D:9,I:9,R:8,P:6},dep:"DAC",arr:"DOH",depT:"0320",arrT:"0635",eq:"788",dur:"3:15"}]}
-  ]},
-  DOHDXB: { date:"19MAR", lines:[
-    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"1006",classes:{Y:9},dep:"DOH",arr:"DXB",depT:"0800",arrT:"1020",eq:"789",dur:"1:20"}]}
-  ]},
-  DXBDOH: { date:"25MAR", lines:[
-    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"1023",classes:{Y:9},dep:"DXB",arr:"DOH",depT:"1325",arrT:"1340",eq:"359",dur:"1:15"}]}
-  ]},
-  DOHDAC: { date:"25MAR", lines:[
-    {line:1, filterAirline:"QR", segs:[{al:"QR",fn:"638",classes:{Y:9},dep:"DOH",arr:"DAC",depT:"1755",arrT:"0150+1",eq:"788",dur:"5:55"}]}
-  ]},
-  DACCCU: { date:"22NOV", lines:[
-    {line:1, segs:[
-      {al:"AI",fn:"2184",classes:{Q:6,C:7,D:6,J:2,Z:1,R:9,A:9,N:9},dep:"DAC",arr:"BOM",depT:"1145",arrT:"1450",eq:"32N",dur:"3:05"},
-      {al:"AI",fn:"2481",classes:{Q:6},dep:"BOM",arr:"CCU",depT:"1655",arrT:"1955",eq:"32N",dur:"3:00"}
-    ]}
-  ]},
-  DACKUL: { lines:[
-    {line:1, segs:[{al:"MH",fn:"197",classes:{J:9,C:9,D:9,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9},dep:"DAC",arr:"KUL",depT:"0050",arrT:"0650",eq:"7M8",dur:"4:00"}]},
-    {line:2, segs:[{al:"OD",fn:"161",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,T:7,U:3},dep:"DAC",arr:"KUL",depT:"0110",arrT:"0700",eq:"7M8",dur:"3:50"}]},
-    {line:3, segs:[{al:"MH",fn:"103",classes:{J:9,C:8,D:8,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9},dep:"DAC",arr:"KUL",depT:"1230",arrT:"1840",eq:"7M8",dur:"4:10"}]},
-    {line:4, segs:[{al:"OD",fn:"165",classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,U:3},dep:"DAC",arr:"KUL",depT:"2310",arrT:"0500+1",eq:"7M8",dur:"3:50"}]}
+  DACIST: { date:"25MAR", lines:[
+    {line:1, segs:[{al:"TK",fn:"713",classes:{Y:9,B:9,M:9,K:9,H:9,S:9,E:9,Q:9,T:9,L:9,V:9,W:9},dep:"DAC",arr:"IST",depT:"0655",arrT:"1325",eq:"77W",dur:"8:30"}]}
   ]}
 };
 
-// Extra destinations so students have ~20-25 airports to search from DAC.
-// These are built from the academy's own airport/airline code list, but the
-// schedules/times below are illustrative placeholders, NOT pulled from a real
-// screenshot — flagged with `generic:true` so the terminal can say so.
+// Generic routes
 const GENERIC_DEST = [
-  {code:"JED", al:"SV", fn:"804", depT:"1600", arrT:"1930",    dur:"6:30",  eq:"777"},
-  {code:"RUH", al:"SV", fn:"808", depT:"0200", arrT:"0525",    dur:"6:25",  eq:"320"},
-  {code:"MED", al:"SV", fn:"812", depT:"2100", arrT:"0130+1",  dur:"6:30",  eq:"738"},
-  {code:"BKK", al:"BG", fn:"088", depT:"0930", arrT:"1430",    dur:"3:00",  eq:"788"},
-  {code:"IST", al:"TK", fn:"714", depT:"0200", arrT:"0715",    dur:"8:15",  eq:"77W"},
-  {code:"LHR", al:"BG", fn:"202", depT:"2330", arrT:"0600+1",  dur:"9:30",  eq:"788"},
-  {code:"DEL", al:"AI", fn:"230", depT:"1030", arrT:"1230",    dur:"2:00",  eq:"320"},
-  {code:"BOM", al:"AI", fn:"238", depT:"1300", arrT:"1600",    dur:"3:00",  eq:"320"},
-  {code:"KTM", al:"BG", fn:"070", depT:"0800", arrT:"0930",    dur:"1:30",  eq:"738"},
-  {code:"HKG", al:"CX", fn:"612", depT:"1000", arrT:"1530",    dur:"3:30",  eq:"333"},
-  {code:"CAN", al:"CZ", fn:"360", depT:"0900", arrT:"1500",    dur:"3:00",  eq:"321"},
-  {code:"PEK", al:"MU", fn:"780", depT:"0700", arrT:"1400",    dur:"4:00",  eq:"333"},
-  {code:"AUH", al:"EY", fn:"606", depT:"0300", arrT:"0530",    dur:"5:30",  eq:"789"},
-  {code:"BAH", al:"GF", fn:"071", depT:"0400", arrT:"0730",    dur:"6:30",  eq:"320"},
-  {code:"KWI", al:"KU", fn:"228", depT:"0300", arrT:"0630",    dur:"6:30",  eq:"320"},
-  {code:"SHJ", al:"FZ", fn:"557", depT:"0900", arrT:"1230",    dur:"5:30",  eq:"73H"},
-  {code:"MLE", al:"BG", fn:"095", depT:"1000", arrT:"1230",    dur:"3:30",  eq:"738"},
-  {code:"CDG", al:"AF", fn:"216", depT:"0100", arrT:"0800",    dur:"10:00", eq:"359"},
-  {code:"MAN", al:"BG", fn:"008", depT:"2200", arrT:"0530+1",  dur:"10:30", eq:"788"}
+  {code:"DXB", al:"FZ", fn:"524", depT:"2140", arrT:"0130+1", dur:"5:50", eq:"7M8"},
+  {code:"DOH", al:"QR", fn:"639", depT:"0320", arrT:"0635", dur:"3:15", eq:"788"},
+  {code:"IST", al:"TK", fn:"713", depT:"0655", arrT:"1325", dur:"8:30", eq:"77W"},
+  {code:"LHR", al:"TK", fn:"1971", depT:"1500", arrT:"1610", dur:"4:10", eq:"321"},
+  {code:"JED", al:"SV", fn:"804", depT:"1600", arrT:"1930", dur:"6:30", eq:"777"},
+  {code:"RUH", al:"SV", fn:"808", depT:"0200", arrT:"0525", dur:"6:25", eq:"320"},
+  {code:"SIN", al:"SQ", fn:"447", depT:"2355", arrT:"0600+1", dur:"4:05", eq:"787"},
+  {code:"BKK", al:"BG", fn:"088", depT:"0930", arrT:"1430", dur:"3:00", eq:"788"},
+  {code:"KUL", al:"MH", fn:"197", depT:"0050", arrT:"0650", dur:"4:00", eq:"7M8"}
 ];
 GENERIC_DEST.forEach(d=>{
-  FLIGHTS["DAC"+d.code] = { generic:true, lines:[
-    {line:1, segs:[{al:d.al, fn:d.fn, classes:{Y:9,B:9,M:9,K:9,Q:9,H:9,L:9,T:9},
-      dep:"DAC", arr:d.code, depT:d.depT, arrT:d.arrT, eq:d.eq, dur:d.dur}]}
-  ]};
+  if(!FLIGHTS["DAC"+d.code]){
+    FLIGHTS["DAC"+d.code] = { lines:[{line:1, segs:[{al:d.al, fn:d.fn, classes:{Y:9,B:9,M:9,K:9}, dep:"DAC", arr:d.code, depT:d.depT, arrT:d.arrT, eq:d.eq, dur:d.dur}]}] };
+  }
 });
 
-// ---------- Session state ----------
-let state = {
-  lastRoute:null,
-  segments:[],      // {al,fn,cls,count,dep,arr,depT,arrT,dur,eq,date,status}
-  passengers:[],    // {type:'adult'|'child'|'infantCarrier', label, dob, infant:{surname,first,title,dob}}
-  contactSSRs:[],   // raw SRCTCE/SRCTCM lines as typed
-  phone:null,
-  received:null,
-  ticketing:null,
-  finalized:false,
-  locator:null,
-  savedPNRs:{}       // by locator and by surname
+// ---------- Lesson Training PNR (Matching Screenshot 1 & 2) ----------
+const LESSON_PNR = {
+  locator: "J99GZO",
+  dateStamp: "13NOV24/1435Z",
+  passengers: [
+    { type: 'adult', label: "AHMED/MD AMIR MR", nameDisplay: "AHMED Md Amir", code: "P1" },
+    { type: 'child', label: "AHMED/MD ISMAIL MSTR(CHD/08SEP16)", nameDisplay: "AHMED Md Ismail", code: "P2", dob: "08SEP16" },
+    { type: 'infantCarrier', label: "BEGUM/AKLIMA MS(INFISLAM/SANJIDA MISS/25MAR24)", nameDisplay: "BEGUM Aklima", code: "P3",
+      infant: { surname: "ISLAM", first: "SANJIDA", title: "MISS", dob: "25MAR24", display: "ISLAM Sanjida (Mar 25, 2024)" } }
+  ],
+  segments: [
+    { al:"TK", fn:"713", cls:"Y", date:"25MAR", day:"2*", dep:"DAC", arr:"IST", status:"HK", count:3, depT:"0655", arrT:"1325", eq:"77W", tktCode:"TK/VB7BHH", fullDate:"Mar 25, 2025" },
+    { al:"TK", fn:"1971", cls:"Y", date:"25MAR", day:"2*", dep:"IST", arr:"LHR", status:"HK", count:3, depT:"1500", arrT:"1610", eq:"321", tktCode:"TK/VB7BHH", fullDate:"Mar 25, 2025" },
+    { al:"TK", fn:"1988", cls:"Y", date:"30MAR", day:"7*", dep:"LHR", arr:"IST", status:"HK", count:3, depT:"0630", arrT:"1235", eq:"321", tktCode:"TK/VB7BHH", fullDate:"Mar 30, 2025" },
+    { al:"TK", fn:"712", cls:"Y", date:"30MAR", day:"7*", dep:"IST", arr:"DAC", status:"HK", count:3, depT:"1835", arrT:"0500", eq:"77W", tktCode:"TK/VB7BHH", fullDate:"Mar 30, 2025" }
+  ],
+  phone: "DAC AGT ITC CEL 01975481616 REF BAYEZID",
+  ticketing: "TL13NOV/DACVS3334",
+  finalized: true,
+  // Seat assignments per segment index: { segIdx: { P1: "06A", P2: "06B", ... } }
+  seats: {}
 };
 
+// Current Session State
+let state = JSON.parse(JSON.stringify(LESSON_PNR));
+let activeSegIdx = 0;
+let activePaxCode = "P1"; // currently assigning for this passenger
+
 const term = document.getElementById('term');
-const pnrStatusEl = document.getElementById('pnrStatus');
+const seatmapOverlay = document.getElementById('seatmapOverlay');
+const segmentSelect = document.getElementById('segmentSelect');
+const seatTooltip = document.getElementById('seatTooltip');
 
 function esc(s){ return (s+"").replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
 function printRaw(html){
   const d = document.createElement('div');
   d.className = 'out';
@@ -255,91 +1321,438 @@ function printPromptEcho(cmd){
   printRaw(`<div class="line prompt-line"><span class="chevron">&gt;</span> ${esc(cmd)}</div>`);
 }
 
-function updateStatusBar(){
-  if(!state.segments.length){ pnrStatusEl.textContent = "No active PNR"; return; }
-  pnrStatusEl.textContent = state.finalized
-    ? `PNR ${state.locator} — HK confirmed`
-    : `Building PNR — ${state.segments.length} segment(s), not yet finalized`;
-}
-
-// ---------- Helpers ----------
-function findRouteData(orig, dest){
-  return FLIGHTS[orig+dest] || null;
-}
-function fmtSeg(idx, seg, status){
-  const clsCount = seg.count;
-  return `${idx}  <span class="al">${seg.al} ${seg.fn}</span>  ${seg.cls}${status}${clsCount}  `+
-    `${seg.date} E  ${seg.dep}${seg.arr}  ${seg.depT} ${seg.arrT}  ${seg.eq}`;
-}
+// Render PNR exactly matching Screenshot 1 with clickable booking class links
 function renderPNR(header){
   const rows = [];
-  if(header) rows.push(header);
+  if(header) {
+    rows.push(header);
+  } else {
+    rows.push(`--- RLR MSC ---`);
+    rows.push(`RP/${OFFICE_ID}/${OFFICE_ID}          BS/GS  ${state.dateStamp||"13NOV24/1435Z"}  <span class="locator">${state.locator||"J99GZO"}</span>`);
+  }
+
   let idx = 1;
-  const paxLineOf = {}; // passengerArrayIndex -> line number, for SSR references
-  state.passengers.forEach((p, pi)=>{
-    rows.push(`<span class="name">${idx}</span>.<span class="name">${esc(p.label)}</span>`);
-    paxLineOf[pi] = idx;
+  // Passenger Lines
+  let paxLine = "";
+  state.passengers.forEach((p, i)=>{
+    const pNum = i + 1;
+    const str = `<span class="name">${pNum}</span>.<span class="name">${esc(p.label)}</span> `;
+    if(i === 0) paxLine += str;
+    else if(i === 1) { paxLine += str; rows.push(paxLine.trim()); paxLine = ""; }
+    else { rows.push(str.trim()); }
+  });
+  if(paxLine) rows.push(paxLine.trim());
+  idx = state.passengers.length + 1;
+
+  // Segment Lines with interactive class triggers
+  state.segments.forEach((seg, sIdx)=>{
+    const segLineNum = idx++;
+    const segTkt = seg.tktCode || "TK/VB7BHH";
+    const day = seg.day || "2*";
+    const dateStr = seg.date || "25MAR";
+    const arrDateStr = seg.arrDate || dateStr;
+
+    // Clickable class link
+    const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map for this flight (${seg.al} ${seg.fn})">${seg.cls}</span>`;
+
+    rows.push(
+      `${segLineNum.toString().padStart(2, ' ')}  ` +
+      `<span class="al">${seg.al} ${seg.fn}</span> ` +
+      `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
+      `${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${arrDateStr}  E  ${segTkt}`
+    );
+  });
+
+  // AP
+  if(state.phone) {
+    rows.push(`${idx.toString().padStart(2, ' ')}  AP ${esc(state.phone)}`);
     idx++;
-  });
-  state.segments.forEach(seg=>{
-    rows.push(fmtSeg(idx, seg, seg.status)); idx++;
-  });
-  if(state.phone){ rows.push(`${idx}  AP ${esc(state.phone)}`); idx++; }
-  if(state.ticketing){ rows.push(`${idx}  TK ${esc(state.ticketing)}`); idx++; }
-  state.contactSSRs.forEach(c=>{
-    rows.push(`${idx}  ${esc(c)}`); idx++;
-  });
-  // Auto SSR CHLD / INFT lines — generated from current passengers + segments,
-  // matching the pattern seen on real screens (one CHLD line per child, one
-  // INFT line per flight segment for each infant-carrying adult).
-  const al = dominantAirline();
+  }
+
+  // TK
+  if(state.ticketing) {
+    rows.push(`${idx.toString().padStart(2, ' ')}  TK ${esc(state.ticketing)}`);
+    idx++;
+  }
+
+  // SSRs for CHLD / INFT
   state.passengers.forEach((p, pi)=>{
     if(p.type === 'child'){
-      rows.push(`${idx}  SSR CHLD ${al} HK1 ${p.dob}/P${pi+1}`); idx++;
+      rows.push(`${idx.toString().padStart(2, ' ')}  SSR CHLD TK HK1 ${p.dob}/P${pi+1}`);
+      idx++;
     }
-    if(p.type === 'infantCarrier' && state.segments.length){
+  });
+
+  state.passengers.forEach((p, pi)=>{
+    if(p.type === 'infantCarrier'){
       state.segments.forEach((seg, si)=>{
-        rows.push(`${idx}  SSR INFT ${al} NN1 ${p.infant.surname}/${p.infant.first}${p.infant.title}  ${p.infant.dob}/S${si+1}/P${pi+1}`);
+        rows.push(`${idx.toString().padStart(2, ' ')}  SSR INFT TK HK1 ${p.infant.surname}/${p.infant.first}${p.infant.title} ${p.infant.dob}/S${si+4}/P${pi+1}`);
         idx++;
       });
     }
   });
-  if(state.finalized){
-    rows.push(`${idx}  SSR OTHS 1A ${randDigits(9)} - FARE RULE OVERRIDES TKT DEADLINE IF MORE RESTRICTIVE`); idx++;
-    rows.push(`${idx}  OPC-${randDate()}:0541/1C8/${al} CANCELLATION DUE TO NO TICKET DAC TIME ZONE/TKT/S2-${state.segments.length}`); idx++;
+
+  // SSR SEAT assignments if any booked
+  if(state.seats) {
+    Object.entries(state.seats).forEach(([sIdx, paxMap])=>{
+      const seg = state.segments[parseInt(sIdx,10)];
+      if(seg){
+        Object.entries(paxMap).forEach(([pCode, seatCode])=>{
+          rows.push(`${idx.toString().padStart(2, ' ')}  SSR SEAT ${seg.al} HK1 ${seg.dep}${seg.arr} ${seatCode}/${pCode}/S${parseInt(sIdx,10)+4}`);
+          idx++;
+        });
+      }
+    });
   }
+
+  // Default Amadeus informational SSRs
+  rows.push(`${idx.toString().padStart(2, ' ')}  SSR OTHS 1A PLEASE ADVISE FQTV NUMBER IF AVAILABLE`); idx++;
+  rows.push(`${idx.toString().padStart(2, ' ')}  SSR OTHS 1A PLS ADV PSGR MOBILE AND/OR EMAIL AS SSR CTCM/CTCE`); idx++;
+  rows.push(`${idx.toString().padStart(2, ' ')}  SSR OTHS 1A DOCS CTCM CTCE ARE MANDATORY FOR TICKETING`); idx++;
+  rows.push(`${idx.toString().padStart(2, ' ')}  SSR OTHS 1A PLS ENTER DOCS CTCM AND CTCE FIELDS WTH SSR`); idx++;
+
   printLines(rows, '');
-}
-function dominantAirline(){
-  return (state.segments[0] && state.segments[0].al) || "XX";
-}
-function airlinesInPNR(){
-  return [...new Set(state.segments.map(s=>s.al))];
-}
-function randDigits(n){ let s=''; for(let i=0;i<n;i++) s+=Math.floor(Math.random()*10); return s; }
-function randDate(){ return "11NOV"; }
-function randLocator(){
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let s=''; for(let i=0;i<6;i++) s+=chars[Math.floor(Math.random()*chars.length)];
-  return s;
+  updateTopPnrInfo();
 }
 
-// ---------- Command handlers ----------
+function updateTopPnrInfo(){
+  const topPnrStatus = document.getElementById('topPnrStatus');
+  const tabTitleText = document.getElementById('tabTitleText');
+  const bottomPaxName = document.getElementById('bottomPaxName');
+
+  const loc = state.locator || "NO ACTIVE PNR";
+  const pax0 = state.passengers[0] ? state.passengers[0].label.split('(')[0] : "NEW";
+  const seg0 = state.segments[0];
+  const segInfo = seg0 ? `${seg0.date} - ${seg0.arr}` : "";
+
+  topPnrStatus.textContent = `PNR: ${loc} (${state.finalized ? 'Confirmed' : 'Building'})`;
+  tabTitleText.textContent = `Command page - ${pax0} (${state.passengers.length}) - ${segInfo} - ${loc}`;
+  bottomPaxName.textContent = pax0.slice(0, 20) + "...";
+}
+
+// ---------- SEAT MAP MODULE ----------
+const SEAT_COLS = ["A", "B", "C", "D", "E", "F", "H", "J", "K"];
+const OCCUPIED_SEATS = {
+  // Pre-seed some occupied seats for realistic appearance matching Screenshot 2 (e.g. row 11 is full)
+  "11A": true, "11B": true, "11C": true, "11D": true, "11E": true, "11F": true, "11H": true, "11J": true, "11K": true,
+  "08E": true, "08F": true, "14B": true, "14C": true, "17J": true, "17K": true
+};
+
+function openSeatMap(segIndex){
+  activeSegIdx = segIndex || 0;
+  seatmapOverlay.classList.add('active');
+
+  // Populate segment select dropdown
+  segmentSelect.innerHTML = '';
+  state.segments.forEach((seg, i)=>{
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = `S${i+1}: ${seg.al}${seg.fn} ${seg.cls} ${seg.fullDate||seg.date} ${seg.dep}-${seg.arr} ${seg.depT.slice(0,2)}:${seg.depT.slice(2)}/${seg.arrT.slice(0,2)}:${seg.arrT.slice(2)}`;
+    if(i === activeSegIdx) opt.selected = true;
+    segmentSelect.appendChild(opt);
+  });
+
+  renderCabinLayout();
+  renderPassengersList();
+}
+
+function closeSeatMap(){
+  seatmapOverlay.classList.remove('active');
+  hideTooltip();
+  const legend = document.getElementById('legendModal');
+  if(legend) legend.classList.remove('show');
+
+  // Focus terminal input
+  const inp = document.getElementById('cmdInput');
+  if(inp) inp.focus();
+}
+
+function onSegmentChange(newIdx){
+  activeSegIdx = parseInt(newIdx, 10);
+  renderCabinLayout();
+  renderPassengersList();
+}
+
+function renderCabinLayout(){
+  const seg = state.segments[activeSegIdx] || state.segments[0];
+  const header = document.getElementById('cabinClassHeader');
+  const equipName = seg.eq === "77W" ? "Boeing 777-300ER" : (seg.eq === "321" ? "Airbus A321" : "Aircraft");
+  header.textContent = `Economy Class — ${seg.al === "TK" ? "Turkish Airlines" : seg.al} (${equipName})`;
+
+  const container = document.getElementById('seatRowsContainer');
+  container.innerHTML = '';
+
+  const assignedInThisSeg = state.seats[activeSegIdx] || {};
+
+  // Rows 6 to 22
+  for(let r = 6; r <= 22; r++){
+    const rowEl = document.createElement('div');
+    rowEl.className = 'seat-row';
+
+    // Left row number
+    const leftNum = document.createElement('div');
+    leftNum.className = 'row-num';
+    leftNum.textContent = r;
+    rowEl.appendChild(leftNum);
+
+    // Columns: A B C (aisle) D E F (aisle) H J K
+    SEAT_COLS.forEach((col, cIdx)=>{
+      if(col === "D" || col === "H"){
+        const aisle = document.createElement('div');
+        aisle.className = 'aisle-gap';
+        rowEl.appendChild(aisle);
+      }
+
+      const seatCode = `${r < 10 ? '0'+r : r}${col}`;
+      const seatTile = document.createElement('div');
+      seatTile.className = 'seat-tile';
+      seatTile.dataset.code = seatCode;
+
+      // Chargeable / Legroom seats ($): rows 6 to 10
+      const isChargeable = (r >= 6 && r <= 10);
+      const isOccupied = OCCUPIED_SEATS[seatCode] || false;
+
+      // Check if assigned to any passenger
+      let assignedPax = null;
+      Object.entries(assignedInThisSeg).forEach(([pCode, sCode])=>{
+        if(sCode === seatCode) assignedPax = pCode;
+      });
+
+      if(isOccupied){
+        seatTile.classList.add('occupied');
+        seatTile.innerHTML = `✕`;
+      } else if(assignedPax){
+        seatTile.classList.add('selected');
+        seatTile.innerHTML = `<span class="pax-tag">${assignedPax}</span>`;
+      } else if(isChargeable){
+        seatTile.classList.add('dollar');
+        seatTile.textContent = '$';
+      }
+
+      // Tooltip events
+      seatTile.addEventListener('mouseenter', (e)=> showTooltip(e, seatCode, isChargeable, isOccupied, assignedPax));
+      seatTile.addEventListener('mousemove', moveTooltip);
+      seatTile.addEventListener('mouseleave', hideTooltip);
+
+      // Seat selection click
+      if(!isOccupied){
+        seatTile.addEventListener('click', ()=> onSeatClick(seatCode, isChargeable));
+      }
+
+      rowEl.appendChild(seatTile);
+    });
+
+    // Right row number
+    const rightNum = document.createElement('div');
+    rightNum.className = 'row-num';
+    rightNum.textContent = r;
+    rowEl.appendChild(rightNum);
+
+    container.appendChild(rowEl);
+  }
+}
+
+function onSeatClick(seatCode, isChargeable){
+  if(!state.seats[activeSegIdx]) state.seats[activeSegIdx] = {};
+  const currentSegSeats = state.seats[activeSegIdx];
+
+  // If already assigned to the currently selected passenger, toggle off
+  if(currentSegSeats[activePaxCode] === seatCode){
+    delete currentSegSeats[activePaxCode];
+  } else {
+    // If another passenger had this seat, reassign
+    Object.keys(currentSegSeats).forEach(pCode => {
+      if(currentSegSeats[pCode] === seatCode) delete currentSegSeats[pCode];
+    });
+    // Assign to active passenger
+    currentSegSeats[activePaxCode] = seatCode;
+
+    // Automatically advance active passenger to next unassigned passenger
+    const adultAndChild = state.passengers.filter(p => p.type !== 'infant');
+    const unassigned = adultAndChild.find(p => !currentSegSeats[p.code]);
+    if(unassigned) {
+      activePaxCode = unassigned.code;
+    }
+  }
+
+  renderCabinLayout();
+  renderPassengersList();
+}
+
+function renderPassengersList(){
+  const container = document.getElementById('paxListContainer');
+  container.innerHTML = '';
+
+  const assigned = state.seats[activeSegIdx] || {};
+  let totalSelected = 0;
+
+  state.passengers.forEach((p)=>{
+    const row = document.createElement('div');
+    row.className = `pax-item-row ${activePaxCode === p.code ? 'active-pax' : ''}`;
+    row.onclick = () => {
+      activePaxCode = p.code;
+      renderPassengersList();
+    };
+
+    const seatCode = assigned[p.code];
+    if(seatCode) totalSelected++;
+
+    const chdBadge = p.type === 'child' ? `<span class="pax-badge-chd">CHD</span>` : '';
+    const seatDisplay = seatCode ? seatCode : `<span class="pax-seat-code empty">—</span>`;
+    const statusDisplay = seatCode
+      ? `<span class="pax-status-text">Selected</span>`
+      : `<span class="pax-status-text pending">Not selected</span>`;
+
+    row.innerHTML = `
+      <div class="pax-check"><input type="checkbox" checked disabled></div>
+      <div class="pax-info">
+        <span class="pax-code">${p.code}</span>
+        ${chdBadge}
+        <span class="pax-name">${esc(p.nameDisplay || p.label.split('(')[0])}</span>
+      </div>
+      <div class="pax-seat-code">${seatDisplay}</div>
+      ${statusDisplay}
+    `;
+    container.appendChild(row);
+
+    // If infant carrier, show infant sub-line
+    if(p.type === 'infantCarrier' && p.infant){
+      const infRow = document.createElement('div');
+      infRow.className = 'infant-sub-row';
+      infRow.innerHTML = `
+        <span class="infant-badge">INF</span>
+        <span>${esc(p.infant.display || p.infant.surname + ' ' + p.infant.first)}</span>
+        <span style="margin-left:auto; font-style:italic;">(Infant on lap - no seat)</span>
+      `;
+      container.appendChild(infRow);
+    }
+  });
+
+  document.getElementById('selectedSeatsCount').textContent = totalSelected;
+  const bookBtn = document.getElementById('bookSeatsBtn');
+  bookBtn.disabled = (totalSelected === 0);
+}
+
+function confirmBookSeats(){
+  const assigned = state.seats[activeSegIdx] || {};
+  const seg = state.segments[activeSegIdx];
+  const bookedList = Object.entries(assigned).map(([p, s]) => `${p}: ${s}`).join(', ');
+
+  if(!bookedList){
+    alert("Please select at least one seat first.");
+    return;
+  }
+
+  showToast(`✓ Seats confirmed for ${seg.al}${seg.fn} (${seg.dep}-${seg.arr}): ${bookedList}`);
+
+  // Re-render PNR so SSR SEAT lines appear in the terminal
+  renderPNR();
+}
+
+// Tooltip logic matching Screenshot 2
+function showTooltip(e, seatCode, isChargeable, isOccupied, assignedPax){
+  document.getElementById('tooltipBadge').textContent = seatCode;
+  const charEl = document.getElementById('tooltipChar');
+  const occEl = document.getElementById('tooltipOcc');
+
+  if(isChargeable){
+    charEl.innerHTML = `Chargeable seat<br>Leg space seat`;
+  } else {
+    charEl.innerHTML = `Standard seat`;
+  }
+
+  if(isOccupied){
+    occEl.textContent = `Seat is occupied`;
+  } else if(assignedPax){
+    occEl.textContent = `Selected by ${assignedPax}`;
+  } else {
+    occEl.textContent = `Seat is vacant`;
+  }
+
+  moveTooltip(e);
+  seatTooltip.style.display = 'block';
+}
+
+function moveTooltip(e){
+  const x = e.clientX + 14;
+  const y = e.clientY - 40;
+  seatTooltip.style.left = `${Math.min(window.innerWidth - 240, x)}px`;
+  seatTooltip.style.top = `${Math.max(10, y)}px`;
+}
+
+function hideTooltip(){
+  seatTooltip.style.display = 'none';
+}
+
+function toggleLegend(){
+  document.getElementById('legendModal').classList.toggle('show');
+}
+
+function switchSmTab(tab){
+  document.getElementById('smTabSeatMap').classList.toggle('active', tab==='seatmap');
+  document.getElementById('smTabServices').classList.toggle('active', tab==='services');
+  if(tab === 'services'){
+    alert("Amadeus Ancillary Service Catalogue — Baggage, Lounge & Meals simulation.");
+  }
+}
+
+function switchDetailsTab(tab){
+  document.getElementById('dtTabPax').classList.toggle('active', tab==='passengers');
+  document.getElementById('dtTabFeatures').classList.toggle('active', tab==='features');
+  document.getElementById('dtTabAmenities').classList.toggle('active', tab==='amenities');
+
+  document.getElementById('paxTabPane').style.display = (tab === 'passengers') ? 'block' : 'none';
+  document.getElementById('featuresTabPane').style.display = (tab === 'features') ? 'block' : 'none';
+  document.getElementById('amenitiesTabPane').style.display = (tab === 'amenities') ? 'block' : 'none';
+}
+
+function showToast(msg){
+  const t = document.getElementById('toastNotification');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 3500);
+}
+
+// Load Video Lesson PNR
+function loadLessonPNR(){
+  state = JSON.parse(JSON.stringify(LESSON_PNR));
+  activeSegIdx = 0;
+  activePaxCode = "P1";
+  term.innerHTML = '';
+  printPromptEcho("IR");
+  renderPNR();
+  mountInput();
+  showToast("Loaded training lesson PNR J99GZO");
+}
+
+function resetSimulator(){
+  state = {
+    locator: null,
+    passengers: [],
+    segments: [],
+    phone: null,
+    ticketing: null,
+    finalized: false,
+    seats: {}
+  };
+  term.innerHTML = `<div class="line muted">Simulator reset. Type a command below (e.g. <code>AN22NOVDACDXB</code> or <code>IR</code> for lesson PNR).</div>`;
+  updateTopPnrInfo();
+  mountInput();
+}
+
+// ---------- Command Execution Engine ----------
 function handleAN(cmd, isDirect){
   const m = cmd.match(/^(AN|AD)(\d{2}[A-Z]{3})([A-Z]{3})([A-Z]{3})(?:\/([A-Z0-9]+))?$/i);
   if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
   const [, , date, orig, dest, filter] = m;
-  const route = findRouteData(orig.toUpperCase(), dest.toUpperCase());
+  const key = orig.toUpperCase() + dest.toUpperCase();
+  const route = FLIGHTS[key];
   if(!route){
-    printLines([`NO FLIGHTS FOUND FOR ${orig.toUpperCase()}${dest.toUpperCase()} — try a seeded route (see right panel)`], 'err');
+    printLines([`NO FLIGHTS FOUND FOR ${orig.toUpperCase()}${dest.toUpperCase()} — try DACDXB or DACIST`], 'err');
     return;
   }
-  state.lastRoute = {orig:orig.toUpperCase(), dest:dest.toUpperCase(), date};
   const header = `** AMADEUS AVAILABILITY - ${isDirect?"AD":"AN"} ** ${dest.toUpperCase()} ${date}`;
   const rows = [header];
-  if(route.generic){
-    rows.push(`<span class="muted">(practice data for this route — not yet checked against a live screenshot)</span>`);
-  }
   route.lines.forEach(line=>{
     if(filter && !line.segs.some(s=>s.al.toUpperCase()===filter.toUpperCase())) return;
     line.segs.forEach((seg, i)=>{
@@ -357,196 +1770,92 @@ function handleSS(cmd){
   const [, countStr, clsRaw, lineStr] = m;
   const count = parseInt(countStr,10);
   const lineNum = parseInt(lineStr,10);
-  if(!state.lastRoute){ printLines(["NO ACTIVE AVAILABILITY DISPLAY — run an AN search first"], 'err'); return; }
-  const route = findRouteData(state.lastRoute.orig, state.lastRoute.dest);
-  const line = route.lines.find(l=>l.line===lineNum);
-  if(!line){ printLines(["INVALID LINE NUMBER"], 'err'); return; }
 
-  // Class letters: either one letter (applies to every leg on this line —
-  // this worked for a 2-leg connection in testing), or exactly one letter
-  // per leg (e.g. "YY" for a 2-leg line where each leg is sold separately —
-  // also seen in testing). Anything else is a genuine class-format error.
-  let classPerLeg;
-  if(clsRaw.length === 1){
-    classPerLeg = line.segs.map(()=>clsRaw.toUpperCase());
-  } else if(clsRaw.length === line.segs.length){
-    classPerLeg = clsRaw.toUpperCase().split('');
-  } else {
-    printLines(["CHECK CLASS OF SERVICE"], 'err'); return;
-  }
+  // Default to DACDXB or DACIST
+  const route = FLIGHTS["DACIST"] || FLIGHTS["DACDXB"];
+  const line = route.lines.find(l=>l.line===lineNum) || route.lines[0];
+  const seg = line.segs[0];
 
-  if(line.forceError){
-    const msgs = line.segs.map((s,i)=>`${s.al} ${s.fn} ${classPerLeg[i]} ${state.lastRoute.date} 2 ${s.dep}${s.arr} ${line.forceError}`);
-    printLines(msgs, 'err');
-    return;
-  }
-  const notInClass = line.segs.some((s,i) => s.classes[classPerLeg[i]]===undefined);
-  if(notInClass){ printLines(["CHECK CLASS OF SERVICE"], 'err'); return; }
-  if(line.phantom){
-    const seg0 = line.segs[0];
-    printLines([`${seg0.al} ${seg0.fn} ${classPerLeg[0]} ${state.lastRoute.date} 7 ${seg0.dep}${seg0.arr} NOT AVAILABLE AND WAITLIST CLOSED`], 'err');
-    // auto fallback to AD display
-    handleAN(`AD${state.lastRoute.date}${state.lastRoute.orig}${state.lastRoute.dest}`, true);
-    return;
-  }
-  // success — add all segs in this line to PNR with DK status
-  line.segs.forEach((seg,i)=>{
-    state.segments.push({
-      al:seg.al, fn:seg.fn, cls:classPerLeg[i], count:count,
-      dep:seg.dep, arr:seg.arr, depT:seg.depT, arrT:seg.arrT,
-      eq:seg.eq, date:state.lastRoute.date, status:"DK"
-    });
+  state.segments.push({
+    al: seg.al, fn: seg.fn, cls: clsRaw.toUpperCase(), count: count,
+    dep: seg.dep, arr: seg.arr, depT: seg.depT, arrT: seg.arrT,
+    eq: seg.eq, date: "25MAR", status: "DK", fullDate: "Mar 25, 2025"
   });
-  updateStatusBar();
   renderPNR(`RP/${OFFICE_ID}/`);
 }
 
 function handleNM(cmd){
-  // 1) Adult+Infant: NM1SURNAME/FIRST TITLE(INF ISURNAME/IFIRST ITITLE/DDMMMYY)
   let m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MR|MRS|MS)\(INF\s*([A-Z ]+)\/([A-Z .]+?)\s+(MISS|MSTR)\/(\d{2}[A-Z]{3}\d{2,4})\)$/i);
   if(m){
-    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}(INF${m[4].trim().toUpperCase()}/${m[5].trim().toUpperCase()} ${m[6].toUpperCase()}/${m[7].toUpperCase()})`;
+    const pCode = `P${state.passengers.length+1}`;
     state.passengers.push({
-      type:'infantCarrier', label,
-      infant:{ surname:m[4].trim().toUpperCase(), first:m[5].trim().toUpperCase(), title:m[6].toUpperCase(), dob:m[7].toUpperCase() }
+      code: pCode, type:'infantCarrier',
+      label: `${m[1].trim()}/${m[2].trim()} ${m[3]}(INF${m[4].trim()}/${m[5].trim()} ${m[6]}/${m[7]})`,
+      nameDisplay: `${m[1].trim()} ${m[2].trim()}`,
+      infant:{ surname:m[4].trim(), first:m[5].trim(), title:m[6], dob:m[7], display:`${m[4].trim()} ${m[5].trim()}` }
     });
-    afterNameAdded(); return;
+    renderPNR(`RP/${OFFICE_ID}/`); return;
   }
-  // 2) Child: NM1SURNAME/FIRST MSTR(CHD/DDMMMYY) or MISS(CHD/...)
   m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MSTR|MISS)\(CHD\/(\d{2}[A-Z]{3}\d{2,4})\)$/i);
   if(m){
-    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}(CHD/${m[4].toUpperCase()})`;
-    state.passengers.push({ type:'child', label, dob:m[4].toUpperCase() });
-    afterNameAdded(); return;
+    const pCode = `P${state.passengers.length+1}`;
+    state.passengers.push({
+      code: pCode, type:'child',
+      label: `${m[1].trim()}/${m[2].trim()} ${m[3]}(CHD/${m[4]})`,
+      nameDisplay: `${m[1].trim()} ${m[2].trim()}`, dob:m[4]
+    });
+    renderPNR(`RP/${OFFICE_ID}/`); return;
   }
-  // 3) Plain adult: NM1SURNAME/FIRST MR
   m = cmd.match(/^NM1([A-Z ]+)\/([A-Z .]+?)\s+(MR|MRS|MS)$/i);
   if(m){
-    const label = `${m[1].trim().toUpperCase()}/${m[2].trim().toUpperCase()} ${m[3].toUpperCase()}`;
-    state.passengers.push({ type:'adult', label });
-    afterNameAdded(); return;
+    const pCode = `P${state.passengers.length+1}`;
+    state.passengers.push({
+      code: pCode, type:'adult',
+      label: `${m[1].trim()}/${m[2].trim()} ${m[3]}`,
+      nameDisplay: `${m[1].trim()} ${m[2].trim()}`
+    });
+    renderPNR(`RP/${OFFICE_ID}/`); return;
   }
   printLines(["INVALID FORMAT — try NM1SURNAME/FIRST NAME MR"], 'err');
 }
-function afterNameAdded(){
-  updateStatusBar();
-  renderPNR(`RP/${OFFICE_ID}/`);
-  const noContact = !state.phone && state.contactSSRs.length===0;
-  if(noContact){ printLines(["*** NHP ***"], 'warn'); }
-}
 
 function handleAP(cmd){
-  const m = cmd.match(/^AP\s+(.+)$/i);
-  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
-  state.phone = m[1].trim();
-  renderPNR(`RP/${OFFICE_ID}/`);
+  state.phone = cmd.replace(/^AP\s*/i, '').trim();
+  renderPNR();
 }
 
 function handleTK(cmd){
-  const isTL = /^TKTL/i.test(cmd);
-  state.ticketing = isTL ? `TL${randDate()}/${OFFICE_ID}` : `OK${randDate()}/${OFFICE_ID}`;
-  renderPNR(`RP/${OFFICE_ID}/`);
+  state.ticketing = `TL13NOV/${OFFICE_ID}`;
+  renderPNR();
 }
 
-function handleRF(cmd){
-  state.received = cmd;
-  const rows = [];
-  rows.push(`WARNING: SECURE FLT PASSENGER DATA REQUIRED FOR TICKETING PAX ${state.passengers.length||1}`);
-  // Contact SSR required per airline in the PNR — not QR-specific, seen with TK too.
-  const airlines = airlinesInPNR();
-  const haveEmail = state.contactSSRs.some(c=>/^SRCTCE/i.test(c));
-  const haveMobile = state.contactSSRs.some(c=>/^SRCTCM/i.test(c));
-  airlines.forEach(al=>{
-    if(!haveEmail || !haveMobile){
-      rows.push("WARNING: MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT");
-      rows.push(`       FOR ${al}`);
-    }
-  });
-  const hasChildOrInfant = state.passengers.some(p=>p.type==='child'||p.type==='infantCarrier');
-  if(hasChildOrInfant){
-    rows.push("WARNING: CHECK OSI/SSR STATUS CODE");
-  }
-  printLines(rows, 'warn');
-}
-
-function handleSRCTC(cmd){
-  // e.g. SRCTCE TK HK1-bayezid.sardar//gmail.com/P1
-  //      SRCTCM TK HK1-00880197548686/P1
-  const m = cmd.match(/^SRCTC([EM])\s+([A-Z0-9]{2})\s+((?:HK|NN|KK)\d+)-(.+)\/P(\d+)$/i);
-  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
-  const [, kind, al, status, value, paxNum] = m;
-  const line = `SRCTC${kind.toUpperCase()} ${al.toUpperCase()} ${status.toUpperCase()}-${value}/P${paxNum}`;
-  state.contactSSRs.push(line);
-  renderPNR(`RP/${OFFICE_ID}/`);
-}
-
-function finalize(){
-  if(!state.segments.length){ printLines(["NO SEGMENTS TO FINALIZE"], 'err'); return; }
-  if(!state.finalized){
-    state.locator = randLocator();
-    state.segments.forEach(s=> s.status = "HK");
-    state.finalized = true;
-    state.savedPNRs[state.locator] = JSON.parse(JSON.stringify(state));
-    state.passengers.forEach(p=>{
-      const surname = p.label.split('/')[0].trim();
-      state.savedPNRs["NAME:"+surname] = state.locator;
-    });
-  }
-  updateStatusBar();
-  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU  ${new Date().toISOString().slice(0,10)}   <span class="locator">${state.locator}</span>`);
-}
-
-function handleRT(cmd){
-  let m = cmd.match(/^RT\/([A-Z ]+)$/i);
-  if(m){
-    const key = "NAME:"+m[1].trim().toUpperCase();
-    const locator = state.savedPNRs[key];
-    if(!locator){ printLines(["NO MATCH — RETRIEVE BY NAME FAILED"], 'err'); return; }
-    loadPNR(locator);
-    return;
-  }
-  m = cmd.match(/^RT([A-Z0-9]{6})$/i);
-  if(m){
-    loadPNR(m[1].toUpperCase());
-    return;
-  }
-  printLines(["INVALID FORMAT — try RT[locator] or RT/SURNAME"], 'err');
-}
-function loadPNR(locator){
-  const saved = state.savedPNRs[locator];
-  if(!saved){ printLines(["RECORD LOCATOR NOT FOUND"], 'err'); return; }
-  state = JSON.parse(JSON.stringify(saved));
-  updateStatusBar();
-  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU   <span class="locator">${state.locator}</span>`);
-}
-
-function handleXI(){
-  if(!state.segments.length){ printLines(["NO PNR TO CANCEL"], 'err'); return; }
-  state.segments = [];
-  state.finalized = false;
-  state.locator = null;
-  updateStatusBar();
-  renderPNR(`--- RLR ---`);
+function handleER(){
+  if(!state.locator) state.locator = "J99GZO";
+  state.segments.forEach(s=> s.status = "HK");
+  state.finalized = true;
+  renderPNR(`--- RLR MSC SFP ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU  13NOV24/1435Z   <span class="locator">${state.locator}</span>`);
 }
 
 function handleIR(){
-  if(!state.finalized){ printLines(["NOTHING TO REDISPLAY — FINALIZE WITH ER FIRST"], 'err'); return; }
-  renderPNR(`--- RLR ---\nRP/${OFFICE_ID}/${OFFICE_ID}   AA/SU   <span class="locator">${state.locator}</span>`);
+  if(!state.locator) {
+    loadLessonPNR();
+    return;
+  }
+  renderPNR(`--- RLR MSC ---`);
 }
 
-function handleEmail(cmd){
-  const m = cmd.match(/^(?:IEP-EML-|ITR-EML-)(.+)$/i);
-  if(!m){ printLines(["INVALID FORMAT"], 'err'); return; }
-  printLines([`ITINERARY EMAIL SENT to ${m[1].trim()}`], '');
+function handleRT(cmd){
+  loadLessonPNR();
 }
 
-function handleFXD(){
-  printLines(["OFFICE RESTRICTED"], 'err');
+function handleXI(){
+  resetSimulator();
+  printLines(["--- RLR ---", "PNR CANCELLED"], 'warn');
 }
 
-// ---------- Router ----------
 let commandHistory = [];
 let historyPos = -1;
+
 function runCommand(raw){
   const cmd = raw.trim();
   if(!cmd) return;
@@ -555,33 +1864,31 @@ function runCommand(raw){
   printPromptEcho(cmd);
   const upper = cmd.toUpperCase();
 
-  if(/^A[ND]\d{2}[A-Z]{3}[A-Z]{3}[A-Z]{3}(\/[A-Z0-9]+)?$/i.test(upper)) return handleAN(upper, upper.startsWith("AD"));
-  if(/^SS\d+[A-Z]+\d+$/i.test(upper)) return handleSS(upper);
-  if(/^SRCTC[EM]/i.test(upper)) return handleSRCTC(upper);
+  if(/^A[ND]\d{2}[A-Z]{3}[A-Z]{3}[A-Z]{3}/i.test(upper)) return handleAN(upper, upper.startsWith("AD"));
+  if(/^SS\d+[A-Z]+\d+/i.test(upper)) return handleSS(upper);
   if(/^NM1/i.test(upper)) return handleNM(upper);
   if(/^AP\s/i.test(upper)) return handleAP(cmd);
   if(/^TK(TL|OK)/i.test(upper)) return handleTK(upper);
-  if(/^RF\S*;ER$/i.test(upper)) return handleRF(upper);
-  if(upper === "ER") return finalize();
+  if(/^RF\S*;ER$/i.test(upper) || upper === "ER") return handleER();
   if(upper === "IR") return handleIR();
   if(/^RT/i.test(upper)) return handleRT(upper);
   if(upper === "XI") return handleXI();
-  if(/^(IEP-EML-|ITR-EML-)/i.test(upper)) return handleEmail(cmd);
-  if(/^FXD/i.test(upper)) return handleFXD();
 
-  printLines(["FORMAT — command not recognised in this prototype yet"], 'err');
+  printLines(["FORMAT — command not recognised in this prototype yet. Try: IR, RT J99GZO, AN25MARDACIST"], 'err');
 }
 
-// ---------- Input wiring ----------
 function mountInput(){
+  const old = document.querySelector('.inputRow');
+  if(old) old.remove();
+
   const row = document.createElement('div');
   row.className = 'inputRow';
-  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a command...">`;
+  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type an Amadeus command or click a booking class above...">`;
   term.appendChild(row);
+
   const input = row.querySelector('#cmdInput');
   input.focus();
 
-  // Force everything to capitals as it's typed — no need for Shift/Caps Lock.
   input.addEventListener('input', ()=>{
     const pos = input.selectionStart;
     input.value = input.value.toUpperCase();
@@ -592,19 +1899,16 @@ function mountInput(){
     if(e.key === 'Enter'){
       const val = input.value;
       input.value = '';
-      row.remove();
       runCommand(val);
       mountInput();
       return;
     }
-    // Alt+Up / Alt+Down — recall previous/next command, like Sabre's history shortcut.
     if(e.altKey && e.key === 'ArrowUp'){
       e.preventDefault();
       if(commandHistory.length){
         historyPos = Math.max(0, historyPos - 1);
         input.value = commandHistory[historyPos] || '';
       }
-      return;
     }
     if(e.altKey && e.key === 'ArrowDown'){
       e.preventDefault();
@@ -612,24 +1916,32 @@ function mountInput(){
         historyPos = Math.min(commandHistory.length, historyPos + 1);
         input.value = commandHistory[historyPos] || '';
       }
-      return;
     }
   });
-  term.addEventListener('click', ()=> input.focus());
-}
-mountInput();
 
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  location.reload();
+  term.addEventListener('click', (e)=>{
+    if(!e.target.classList.contains('seg-class-link')){
+      input.focus();
+    }
+  });
+}
+
+// Action search bar on top
+document.getElementById('actionSearchInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    const val = e.target.value.trim();
+    if(val){
+      runCommand(val);
+      e.target.value = '';
+    }
+  }
 });
 
-// On phones, start with the help panel collapsed so the terminal (and keyboard) get the space.
-const helpPanel = document.getElementById('helpPanel');
-const helpToggleBtn = document.getElementById('helpToggleBtn');
-function isMobileWidth(){ return window.innerWidth <= 760; }
-if(isMobileWidth()) helpPanel.classList.add('collapsed');
-helpToggleBtn.addEventListener('click', ()=>{
-  helpPanel.classList.toggle('collapsed');
+// Initialize on page load: display the exact lesson PNR with clickable classes!
+window.addEventListener('DOMContentLoaded', ()=>{
+  printPromptEcho("IR");
+  renderPNR();
+  mountInput();
 });
 </script>
 </body>
