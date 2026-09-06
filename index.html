@@ -3213,6 +3213,147 @@ function handleMealCodesFlightInfo(){
 let commandHistory = [];
 let historyPos = -1;
 
+// ---------- XE — Delete SSR / DOCS / OSI by line number or SSR type ----------
+// Formats:
+//   XE10              — delete PNR line number 10
+//   XEMOML            — delete all MOML meal requests
+//   XECHML            — delete all CHML meal requests
+//   XESRDOCS/P1       — delete passport docs for passenger 1
+//   XEDOCS/P2         — same shorthand for SRDOCS
+function handleXE(cmd){
+  const upper = cmd.toUpperCase().trim();
+  const body  = upper.replace(/^XE\s*/i, '').trim();
+
+  if(!body){
+    printLines([
+      'INVALID XE FORMAT. Examples:',
+      '  XE10          — Delete line 10 from PNR',
+      '  XEMOML        — Delete Muslim Meal SSR',
+      '  XECHML        — Delete Child Meal SSR',
+      '  XESRDOCS/P1   — Delete passport docs for Passenger 1',
+    ], 'err');
+    return;
+  }
+
+  // ---- Format 1: XE[number] — delete by line number ----
+  const lineMatch = body.match(/^(\d+)$/);
+  if(lineMatch){
+    const lineNum = parseInt(lineMatch[1], 10);
+    // Try to delete the corresponding rendered PNR item
+    // Map line number to state items: passengers first, then segments, AP, TK, SSRs
+    let deleted = false;
+    let lineCounter = 1;
+
+    // Passengers
+    for(let i = 0; i < state.passengers.length; i++){
+      if(lineCounter === lineNum){
+        const removed = state.passengers.splice(i, 1)[0];
+        state.hasPending = true;
+        printLines([`ELEMENT DELETED - LINE ${lineNum} (${esc(removed.label.split('(')[0].trim())})`], 'success');
+        showToast(`✕ Line ${lineNum} deleted — Type IR to refresh PNR`);
+        deleted = true; break;
+      }
+      lineCounter++;
+    }
+
+    // Segments
+    if(!deleted){
+      for(let i = 0; i < state.segments.length; i++){
+        if(lineCounter === lineNum){
+          const removed = state.segments.splice(i, 1)[0];
+          state.hasPending = true;
+          printLines([`ELEMENT DELETED - LINE ${lineNum} (${removed.al}${removed.fn} ${removed.dep}-${removed.arr})`], 'success');
+          showToast(`✕ Segment deleted — Type IR to refresh`);
+          deleted = true; break;
+        }
+        lineCounter++;
+      }
+    }
+
+    // SSR / Other lines (AP, TK, special SSRs, docs)
+    if(!deleted){
+      if(state.phone) lineCounter++;
+      if(state.ticketing) lineCounter++;
+      // SSR lines
+      const ssrList = state.specialSSRs || [];
+      for(let i = 0; i < ssrList.length; i++){
+        if(lineCounter === lineNum){
+          const removed = ssrList.splice(i, 1)[0];
+          state.hasPending = true;
+          printLines([`ELEMENT DELETED - LINE ${lineNum} (SSR ${removed.type}/${removed.pax})`], 'success');
+          showToast(`✕ SSR ${removed.type} deleted`);
+          deleted = true; break;
+        }
+        lineCounter++;
+      }
+    }
+
+    if(!deleted){
+      printLines([`LINE ${lineNum} NOT FOUND OR CANNOT BE DELETED IN TRAINING MODE`], 'warn');
+    }
+    return;
+  }
+
+  // ---- Format 2: XE[SSRTYPE] — delete all SSRs of that type ----
+  // e.g. XEMOML, XECHML, XEBBML
+  const MEAL_CODES = ['MOML','CHML','BBML','BSCT','AVML','BLML','DBML','FPML','GFML','HNML','KSML','LCML','LFML','LSML','NFML','NLML','ORML','RVML','SFML','SPML','VGML','VLML','VOML','WCHR','WCHS','WCHC'];
+  const ssrTypeMatch = MEAL_CODES.find(c => body === c || body === 'SSR' + c);
+  if(ssrTypeMatch){
+    const before = (state.specialSSRs || []).length;
+    state.specialSSRs = (state.specialSSRs || []).filter(s => s.type !== ssrTypeMatch);
+    const removed = before - state.specialSSRs.length;
+    if(removed > 0){
+      state.hasPending = true;
+      printLines([`SSR ${ssrTypeMatch} DELETED (${removed} entr${removed > 1 ? 'ies' : 'y'} removed) — Type IR to confirm`], 'success');
+      showToast(`✕ SSR ${ssrTypeMatch} removed`);
+    } else {
+      printLines([`NO SSR ${ssrTypeMatch} FOUND IN THIS PNR`], 'warn');
+    }
+    return;
+  }
+
+  // ---- Format 3: XESRDOCS/P1 or XEDOCS/P1 — delete passport docs ----
+  const docsMatch = body.match(/^(?:SR)?DOCS\/(P\d+(?:\/INF)?|INF|ALL)$/i);
+  if(docsMatch){
+    const target = docsMatch[1].toUpperCase();
+    const before = (state.docsEntries || []).length;
+    if(target === 'ALL'){
+      state.docsEntries = [];
+    } else {
+      state.docsEntries = (state.docsEntries || []).filter(d => d.pax !== target);
+    }
+    const removed = before - (state.docsEntries || []).length;
+    if(removed > 0){
+      state.hasPending = true;
+      renderPNR();
+      printLines([`SSR DOCS DELETED FOR ${target} — Re-enter SRDOCS to add new passport`], 'success');
+      showToast(`✕ DOCS deleted for ${target}`);
+    } else {
+      printLines([`NO DOCS ENTRY FOUND FOR ${target}`], 'warn');
+    }
+    return;
+  }
+
+  // ---- Format 4: XEOSI — delete OSI entries ----
+  if(body === 'OSI' || body === 'OSHI' || body.startsWith('OSI')){
+    const before = (state.osiEntries || []).length;
+    state.osiEntries = [];
+    if(before > 0){
+      state.hasPending = true;
+      printLines([`ALL OSI ENTRIES DELETED (${before} removed)`], 'success');
+      showToast('✕ OSI entries deleted');
+    } else {
+      printLines(['NO OSI ENTRIES TO DELETE'], 'warn');
+    }
+    return;
+  }
+
+  printLines([
+    `CANNOT DELETE: ${body}`,
+    'Valid formats: XE[lineNo]  |  XE[SSRTYPE]  |  XESRDOCS/P1'
+  ], 'err');
+}
+
 function runCommand(raw){
   const cmd = raw.trim();
   if(!cmd) return;
@@ -3282,7 +3423,10 @@ function runCommand(raw){
   if(/^NU\d+[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
   if(/^\d+\/[A-Z]+\/[A-Z]+/i.test(upper)) return handleNameModify(upper);
 
-  printLines([`FORMAT — command not recognised. Try: HE/MEAL · MS22 · SRMOML/P2 · RFR · ER · FXB · TQT · FPINV · TTP · NU1NAME/FIRST · 1/NAME/FIRST`], 'err');
+  // XE — Delete SSR / DOCS / OSI entry (XE10 or XEMOML or XESRDOCS/P1)
+  if(/^XE/i.test(upper)) return handleXE(upper);
+
+  printLines([`FORMAT — command not recognised. Try: HE/MEAL · MS22 · SRMOML/P2 · ER · FXB · TQT · FPINV · TTP · NU1NAME/FIRST · XE10 · XEMOML · XESRDOCS/P1`], 'err');
 }
 
 function mountInput(){

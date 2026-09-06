@@ -1,0 +1,428 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amaduce Training Simulator — Admin License Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-dark: #0a0e17;
+    --card-bg: #111827;
+    --card-border: #1f293d;
+    --accent: #0284c7;
+    --accent-glow: #38bdf8;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background-color: var(--bg-dark);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 30px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .container {
+    width: 100%;
+    max-width: 760px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .badge {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--accent-glow);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+    margin-bottom: 24px;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .form-group {
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  input, select {
+    width: 100%;
+    background: #0b111e;
+    border: 1px solid #1e293b;
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent-glow);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  }
+  .btn-generate {
+    width: 100%;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #fff;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+  }
+  .btn-generate:hover {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+  }
+  .result-box {
+    margin-top: 24px;
+    background: #080d16;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    padding: 20px;
+    display: none;
+  }
+  .result-title {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .key-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent-glow);
+    letter-spacing: 2px;
+    background: rgba(2, 132, 199, 0.1);
+    padding: 14px 18px;
+    border-radius: 8px;
+    border: 1px dashed rgba(56, 189, 248, 0.4);
+    text-align: center;
+    margin-bottom: 16px;
+    user-select: all;
+  }
+  .action-row {
+    display: flex;
+    gap: 10px;
+  }
+  .btn-action {
+    flex: 1;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-action:hover {
+    background: #334155;
+  }
+  .whatsapp-text-box {
+    margin-top: 14px;
+    background: #0a111a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+    white-space: pre-wrap;
+    font-family: inherit;
+    line-height: 1.5;
+  }
+  .history-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .history-title {
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .table-wrapper {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th {
+    text-align: left;
+    padding: 10px;
+    color: var(--text-muted);
+    border-bottom: 1px solid #1e293b;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 10px;
+    border-bottom: 1px solid #141c2c;
+    color: #cbd5e1;
+  }
+  .key-cell {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent-glow);
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="badge">Amaduce Academy Admin</div>
+    <h1>License Key Generator</h1>
+    <p class="subtitle">Offline 2-Year Activation Keys for Amaduce Training Simulator APK</p>
+  </div>
+
+  <div class="card">
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Student Name</label>
+        <input type="text" id="studentName" placeholder="e.g. Shakib Ahmed" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Phone / Student ID</label>
+        <input type="text" id="studentPhone" placeholder="e.g. 01712345678" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Batch / Group</label>
+        <input type="text" id="studentBatch" placeholder="e.g. Batch 24" value="Batch 2026">
+      </div>
+      <div class="form-group">
+        <label>Validity Duration</label>
+        <select id="validityPeriod">
+          <option value="730" selected>2 Years (Standard — 730 Days)</option>
+          <option value="365">1 Year (365 Days)</option>
+          <option value="180">6 Months (180 Days)</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-generate" onclick="generateLicense()">
+      <span>⚡ Generate New License Key</span>
+    </button>
+
+    <div class="result-box" id="resultBox">
+      <div class="result-title">Generated License Key (Ready to send)</div>
+      <div class="key-display" id="keyDisplay">AMT-XXXX-XXXX-XXXX</div>
+
+      <div class="action-row">
+        <button class="btn-action" onclick="copyKey()">📋 Copy Key Only</button>
+        <button class="btn-action" onclick="copyWhatsAppMessage()">💬 Copy WhatsApp Msg</button>
+        <button class="btn-action" onclick="saveToCSV()">📥 Export All to CSV</button>
+      </div>
+
+      <div class="whatsapp-text-box" id="whatsappBox"></div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-head">
+      <div class="history-title">Generated Keys History</div>
+      <button class="btn-action" style="padding: 6px 12px; font-size: 11px;" onclick="clearHistory()">Clear History</button>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Student</th>
+            <th>Phone / ID</th>
+            <th>Batch</th>
+            <th>License Key</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No keys generated yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // MUST MATCH LicenseManager.java exactly
+  const MASTER_SECRET = "AMADUCE-GDS-TRAINING-2026-SHAKIB";
+
+  async function sha256(str) {
+    const buffer = new TextEncoder().encode(str);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function randomHex(length) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let res = "";
+    for (let i = 0; i < length; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return res;
+  }
+
+  let generatedHistory = JSON.parse(localStorage.getItem("amaduce_lic_history") || "[]");
+
+  async function generateLicense() {
+    const name = document.getElementById("studentName").value.trim() || "Student";
+    const phone = document.getElementById("studentPhone").value.trim() || "N/A";
+    const batch = document.getElementById("studentBatch").value.trim() || "Regular";
+
+    const part1 = randomHex(4);
+    const part2 = randomHex(4);
+    const payload = part1 + part2;
+
+    const fullHash = await sha256(MASTER_SECRET + payload);
+    const part3 = fullHash.substring(0, 4).toUpperCase();
+
+    const licenseKey = `AMT-${part1}-${part2}-${part3}`;
+
+    document.getElementById("keyDisplay").textContent = licenseKey;
+
+    const msg = `আসসালামু আলাইকুম ${name},\n\nআপনার Amaduce Training Simulator (GDS) অ্যাপের এক্টিভেশন কি:\n🔑 License Key: ${licenseKey}\n\n📌 নির্দেশিকা:\n1. APK ফাইলটি আপনার ফোনে ইন্সটল করুন।\n2. অ্যাপটি ওপেন করে উপরের License Key টি দিন এবং Activate বাটনে চাপুন।\n3. এই কি-টি আপনার ফোনের সাথে ২ বছরের জন্য লক থাকবে। অন্য ফোনে ট্রান্সফার করতে চাইলে একাডেমির সাথে যোগাযোগ করুন।\n\nধন্যবাদ,\nAmaduce Academy`;
+
+    document.getElementById("whatsappBox").textContent = msg;
+    document.getElementById("resultBox").style.display = "block";
+
+    // Save history
+    const record = {
+      date: new Date().toLocaleDateString("en-GB"),
+      name: name,
+      phone: phone,
+      batch: batch,
+      key: licenseKey
+    };
+    generatedHistory.unshift(record);
+    localStorage.setItem("amaduce_lic_history", JSON.stringify(generatedHistory));
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const tbody = document.getElementById("historyTableBody");
+    if (!generatedHistory.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #64748b; padding: 20px;">No keys generated yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = generatedHistory.map(r => `
+      <tr>
+        <td>${r.date}</td>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.phone}</td>
+        <td>${r.batch}</td>
+        <td class="key-cell">${r.key}</td>
+      </tr>
+    `).join("");
+  }
+
+  function copyKey() {
+    const key = document.getElementById("keyDisplay").textContent;
+    navigator.clipboard.writeText(key).then(() => {
+      alert("License Key copied to clipboard: " + key);
+    });
+  }
+
+  function copyWhatsAppMessage() {
+    const msg = document.getElementById("whatsappBox").textContent;
+    navigator.clipboard.writeText(msg).then(() => {
+      alert("WhatsApp message copied to clipboard! Paste it to your student.");
+    });
+  }
+
+  function clearHistory() {
+    if (confirm("Are you sure you want to clear generated keys history?")) {
+      generatedHistory = [];
+      localStorage.removeItem("amaduce_lic_history");
+      renderHistory();
+    }
+  }
+
+  function saveToCSV() {
+    if (!generatedHistory.length) {
+      alert("No history to export!");
+      return;
+    }
+    let csv = "Date,Name,Phone,Batch,LicenseKey\n";
+    generatedHistory.forEach(r => {
+      csv += `"${r.date}","${r.name}","${r.phone}","${r.batch}","${r.key}"\n`;
+    });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Amaduce_Licenses_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  }
+
+  // Load history on startup
+  renderHistory();
+</script>
+
+</body>
+</html>

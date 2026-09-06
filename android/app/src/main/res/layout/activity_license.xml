@@ -1,0 +1,132 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#0d1117">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp"
+    android:background="#0d1117">
+
+    <!-- App Logo / Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="amadeus"
+        android:textColor="#005a9c"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:fontFamily="sans-serif"
+        android:letterSpacing="-0.03"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TRAINING SIMULATOR"
+        android:textColor="#38bdf8"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:layout_marginBottom="40dp"/>
+
+    <!-- Card -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#1a2233"
+        android:padding="28dp"
+        android:elevation="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Activate Your License"
+            android:textColor="#ffffff"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter the license key you received from Amaduce Academy."
+            android:textColor="#8899aa"
+            android:textSize="13sp"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- License Key Input -->
+        <EditText
+            android:id="@+id/etLicenseKey"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:hint="AMT-XXXX-XXXX-XXXX"
+            android:textColorHint="#445566"
+            android:textColor="#ffffff"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.1"
+            android:inputType="textCapCharacters"
+            android:maxLength="19"
+            android:background="#0d1a2a"
+            android:padding="12dp"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Error Message -->
+        <TextView
+            android:id="@+id/tvError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#ff4d6d"
+            android:textSize="12sp"
+            android:visibility="gone"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Activate Button -->
+        <Button
+            android:id="@+id/btnActivate"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="ACTIVATE"
+            android:textColor="#ffffff"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:backgroundTint="#005a9c"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#223344"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Device ID (for support) -->
+        <TextView
+            android:id="@+id/tvDeviceId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Device ID: ..."
+            android:textColor="#445566"
+            android:textSize="11sp"
+            android:fontFamily="monospace"/>
+
+    </LinearLayout>
+
+    <!-- Footer -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Amaduce Academy · GDS Training Platform"
+        android:textColor="#334455"
+        android:textSize="11sp"
+        android:layout_marginTop="24dp"/>
+
+</LinearLayout>
+</ScrollView>
