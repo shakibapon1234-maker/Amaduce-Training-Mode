@@ -213,7 +213,7 @@ function renderPNR(header){
   });
 
   // If any pending changes, show the Amadeus parallel-process warning
-  if(state.hasPending){
+  if(state.hasPending && state.locator){
     rows.push(`<span class="warn">PNR UPDATED BY PARALLEL PROCESS-PLEASE VERIFY PNR CONTENT</span>`);
     state.hasPending = false; // clear after display
   }
@@ -1290,24 +1290,20 @@ function handleSR(cmd){
     return;
   }
 
-  // Format: SRCTCE TK HK1-email/P1  or  SRCTCM TK HK1-phone/P1
-  m = cmd.match(/^SRCTC([EM])\s+([A-Z0-9]{2})\s+((?:HK|NN|KK)\d+)-(.+)\/P(\d+)$/i);
+  // Format: SRCTCE TK HK1-email/P1 or SRCTCM TK HK1-phone/P1 or SRCTCMQR HK1-...
+  m = cmd.match(/^SRCTC([EM])\s*([A-Z0-9]{2})?\s*((?:HK|NN|KK)\d+)?[-/](.+?)(?:\/P(\d+))?$/i);
   if(m){
     const kind   = m[1].toUpperCase();
-    const al     = m[2].toUpperCase();
-    const status = m[3].toUpperCase();
-    const value  = m[4];
-    const pCode  = `P${m[5]}`;
+    const al     = (m[2] ? m[2].toUpperCase() : null) || (state.segments[0] && state.segments[0].al) || 'QR';
+    const status = m[3] ? m[3].toUpperCase() : 'HK1';
+    const value  = m[4].trim();
+    const pCode  = m[5] ? `P${m[5]}` : (state.passengers.length > 1 ? 'P1' : 'P1');
     if(!state.specialSSRs) state.specialSSRs = [];
-    // Remove existing CTCE/CTCM for this pax if same type
     state.specialSSRs = state.specialSSRs.filter(s => !(s.type === `CTC${kind}` && s.pax === pCode));
     state.specialSSRs.push({ type: `CTC${kind}`, al, status, value, pax: pCode });
     state.hasPending = true;
-    printLines([
-      `SSR CTC${kind} ${al} ${status} ${value}/${pCode}  --- STAGED`,
-      `--- TYPE IR TO DISPLAY FULL UPDATED PNR ---`
-    ], 'muted');
-    showToast(`âœ“ SSR CTC${kind} staged for ${pCode} â€” Type IR to confirm`);
+    renderPNR();
+    showToast(`✅ SSR CTC${kind} added for ${pCode}`);
     return;
   }
 
@@ -1351,31 +1347,20 @@ function handleES(cmd){
 //   SRDOCS QR HK1-P-BGD-BP1234567-BGD-15MAY15-M-14MAY25-KHAN-TAHMID/P2 (Child, P2)
 //   SRDOCS QR HK1-P-BGD-CP9876543-BGD-10JAN24-MI-09JAN29-KHAN-ZAYAN/P1 (Infant, MI/P1 or /P3)
 function handleSRDOCS(upper, rawCmd){
-  if(!state.locator){
-    loadLessonPNR();
-  }
-
-  // Strip command prefix
+  // Strip command prefix (supports 'SRDOCS', 'SR DOCS', 'SRDOCSQR', etc.)
   let clean = upper.replace(/^SR\s*DOCS\s*/i, '').trim();
 
-  // Pattern: Airline (2) + Status (2-3) + [-/] + Details
-  const leadMatch = clean.match(/^([A-Z0-9]{2})\s+([A-Z0-9]{2,3})[-/](.+)$/i);
-  if(!leadMatch){
-    printLines([
-      'FORMAT ERROR â€” INVALID SRDOCS SYNTAX',
-      'Format: SRDOCS [AL] [STATUS]-[TYPE]-[ISSUE_CTRY]-[DOC_NUM]-[NAT]-[DOB]-[GENDER]-[EXP]-[SURNAME]-[FIRST]/[PAX]',
-      '',
-      'Examples:',
-      '  Adult (P1):  SRDOCS QR HK1-P-BGD-AP3476898-BGD-19OCT90-M-23OCT23-KHAN-ARAFAT',
-      '  Child (P2):  SRDOCS QR HK1-P-BGD-BP1234567-BGD-15MAY15-M-14MAY25-KHAN-TAHMID/P2',
-      '  Infant (MI): SRDOCS QR HK1-P-BGD-CP9876543-BGD-10JAN24-MI-09JAN29-KHAN-ZAYAN/P1'
-    ], 'err');
-    return;
-  }
+  // Determine airline, status, and details
+  let airline = (state.segments && state.segments[0] && state.segments[0].al) ? state.segments[0].al : 'QR';
+  let action = 'HK1';
+  let body = clean;
 
-  const airline = leadMatch[1].toUpperCase();
-  const action  = leadMatch[2].toUpperCase();
-  let body      = leadMatch[3].trim();
+  const leadMatch = clean.match(/^([A-Z0-9]{2})?\s*([A-Z0-9]{2,3})?[-/\s]+(.+)$/i);
+  if(leadMatch){
+    if(leadMatch[1]) airline = leadMatch[1].toUpperCase();
+    if(leadMatch[2]) action = leadMatch[2].toUpperCase();
+    body = leadMatch[3].trim();
+  }
 
   // Check for passenger designation at the end, e.g. /P1, /P2, /P3, /P1/INF, /INF
   let pax = '';
@@ -1390,9 +1375,9 @@ function handleSRDOCS(upper, rawCmd){
 
   if(tokens.length < 8){
     printLines([
-      'FORMAT ERROR â€” MISSING REQUIRED DOCS FIELDS',
-      'Fields: [DocType]-[IssueCountry]-[DocNumber]-[Nationality]-[DOB]-[Gender]-[Expiry]-[Surname]-[FirstName]',
-      'Example: SRDOCS QR HK1-P-BGD-AP3476898-BGD-19OCT90-M-23OCT23-KHAN-ARAFAT'
+      'FORMAT ERROR — MISSING REQUIRED DOCS FIELDS',
+      'Format: SRDOCS [AL] [STATUS]-P/[ISSUE_CTRY]/[DOC_NUM]/[NAT]/[DOB]/[GENDER]/[EXP]/[SURNAME]/[FIRST]',
+      'Example: SRDOCS QR HK1-P/BGD/BG1234561/BGD/15MAR88/F/15SEP27/HOSSAIN/KAMALA'
     ], 'err');
     return;
   }
@@ -1438,11 +1423,11 @@ function handleSRDOCS(upper, rawCmd){
 
   state.hasPending = true;
 
-  // Immediately render updated PNR display (as in Amadeus Screenshot 2)
+  // Immediately render updated PNR display (matches YouTube Screenshot 1!)
   renderPNR();
 
   const typeLabel = isInfant ? 'Infant' : (isChild ? 'Child' : 'Adult');
-  showToast(`âœ… SSR DOCS (${typeLabel}) added for ${pax} â€” Type RFR or RF R, then ER to save`);
+  showToast(`✅ SSR DOCS (${typeLabel}) added for ${pax} — Type RF then ER to save`);
 }
 
 function runSmartCmd(cmd){
