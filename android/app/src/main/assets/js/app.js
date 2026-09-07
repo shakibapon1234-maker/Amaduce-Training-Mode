@@ -217,16 +217,16 @@ function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
   const stCount = `${seg.status || 'DK'}${seg.count || 1}`;
   const eq = seg.eq || '77W';
 
-  // Compute next-day arrival date string if applicable
-  const arrDateStr = isNextDay ? getNextDayDate(dateStr) : '';
+  // Compute arrival date: next day or same day
+  const arrDateStr = isNextDay ? getNextDayDate(dateStr) : dateStr;
   // Spacing: after times, either show arrival date or spaces, then equipment
   // Format: depT arrTClean   [arrDate ]E 0 [eq] M
-  const afterTimes = isNextDay ? `   ${arrDateStr} E 0 ${eq} M` : `   E 0 ${eq} M`;
+  const afterTimes = `   ${arrDateStr} E 0 ${eq} M`;
 
-  // Thai Airways (TG): exact spacing matching real Amadeus
-  if(seg.al === 'TG'){
+  // Standard clean Amadeus output for airlines like TG, MH, OD, BG, AK, BS, TK, EK
+  if(['TG', 'MH', 'OD', 'BG', 'AK', 'BS', 'TK', 'EK'].includes(seg.al)){
     lines.push(
-      `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}  ${timeStr}  ${arrDateStr ? arrDateStr + '  ' : ''}E  0 ${eq} M`
+      `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}  ${timeStr}  ${arrDateStr}  E  0 ${eq} M`
     );
     lines.push(`     SEE RTSVC`);
     return lines;
@@ -327,11 +327,9 @@ function renderPNR(header){
       const rawArrT = seg.arrT || '0000';
       const isNextDay = rawArrT.includes('+1');
       const arrTClean = rawArrT.replace(/\+\d+$/, '');
-      const arrDateStr = isNextDay ? getNextDayDate(dateStr) : '';
+      const arrDateStr = isNextDay ? getNextDayDate(dateStr) : dateStr;
       // Build the time+arrdate portion
-      const timeAndDate = isNextDay
-        ? `${seg.depT} ${arrTClean}  ${arrDateStr} `
-        : `${seg.depT} ${seg.arrT}  `;
+      const timeAndDate = `${seg.depT} ${arrTClean}  ${arrDateStr}  `;
 
       let endCode;
       if(seg.confirmedEndCode){
@@ -907,7 +905,35 @@ function handleAN(cmd, isDirect){
   lastANRoute = route;
   lastANDate = date;
 
-  const header = `** AMADEUS AVAILABILITY - ${isDirect ? "AD" : "AN"} ** ${o} ${date}`;
+  const CITY_NAMES = {
+    KUL: "KUL KUALA LUMPUR.MY",
+    DAC: "DAC DHAKA.BD",
+    BKK: "BKK BANGKOK.TH",
+    SIN: "SIN SINGAPORE.SG",
+    DXB: "DXB DUBAI.AE",
+    DOH: "DOH DOHA.QA",
+    JED: "JED JEDDAH.SA",
+    IST: "IST ISTANBUL.TR",
+    NRT: "NRT TOKYO.JP",
+    JFK: "JFK NEW YORK.US",
+    LHR: "LHR LONDON.GB",
+    DEL: "DEL DELHI.IN",
+    CCU: "CCU KOLKATA.IN",
+    CMB: "CMB COLOMBO.LK"
+  };
+  const destCity = CITY_NAMES[d] || `${d} ${d}.INTL`;
+  const dm = date.match(/^(\d{1,2})([A-Z]{3})/i);
+  const dayNum = dm ? parseInt(dm[1], 10) : 23;
+  const monName = dm ? dm[2].toUpperCase() : 'DEC';
+  const monthsMap = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+  const mIdx = monthsMap[monName] !== undefined ? monthsMap[monName] : 11;
+  const dObj = new Date(2026, mIdx, dayNum);
+  const day2L = ['SU','MO','TU','WE','TH','FR','SA'][dObj.getDay()];
+  const startOfYear = new Date(2026, 0, 1);
+  const dayOfYear = Math.floor((dObj - startOfYear) / (24*60*60*1000)) + 1;
+  const julianStr = String(dayOfYear).padStart(3, ' ');
+
+  const header = `** AMADEUS AVAILABILITY - ${isDirect ? "AD" : "AN"} ** ${destCity.padEnd(28, ' ')}  ${julianStr} ${day2L} ${date} 0000`;
   const rows = [header];
 
   const alFilter = filter ? filter.toUpperCase().replace(/^A/, '') : null;
@@ -917,9 +943,28 @@ function handleAN(cmd, isDirect){
     if(alFilter && !line.segs.some(s => s.al.toUpperCase() === alFilter)) return;
 
     line.segs.forEach((seg, i) => {
-      const clsStr = Object.entries(seg.classes).map(([c, n]) => `${c}${n}`).join(' ');
+      const clsEntries = Object.entries(seg.classes);
+      const isCodeshare = !!seg.codeShare;
+      const alDisplay = isCodeshare ? seg.codeShare.padEnd(9, ' ') : `  ${seg.al} ${(seg.fn.length < 3 ? seg.fn.padStart(3, ' ') : seg.fn)}`.padEnd(9, ' ');
+      const row1Cls = clsEntries.slice(0, 7).map(([c, n]) => `${c}${n}`).join(' ');
+      const row2Cls = clsEntries.length > 7 ? clsEntries.slice(7).map(([c, n]) => `${c}${n}`).join(' ') : '';
       const num = (i === 0) ? (displayIdx++).toString().padStart(2, ' ') : '  ';
-      rows.push(`${num}  <span class="al">${seg.al} ${seg.fn.padEnd(4, ' ')}</span>  ${clsStr}   /${seg.dep} ${seg.arr}  ${seg.depT} ${seg.arrT}  ${seg.eq}  ${seg.dur || '3:00'}`);
+      const hasTerm = (seg.termDep !== undefined || seg.termArr !== undefined);
+      const termD = seg.termDep !== undefined ? ` ${seg.termDep}` : '';
+      const termA = seg.termArr !== undefined ? ` ${seg.termArr}` : '';
+      const slash = hasTerm ? ' ' : '/';
+      const routeStr = `${seg.dep}${termD} ${seg.arr}${termA}`;
+      const durStr = seg.dur ? seg.dur.padStart(10, ' ') : '';
+      const eqStr = `E0/${seg.eq || '77W'}`;
+      const clsPadded = row1Cls.padEnd(20, ' ');
+      if(hasTerm){
+        rows.push(`${num} ${alDisplay}  ${clsPadded} ${slash}${routeStr.padEnd(12, ' ')} ${seg.depT}    ${seg.arrT.padEnd(6, ' ')} ${eqStr.padEnd(10, ' ')} ${durStr}`);
+      } else {
+        rows.push(`${num} <span class="al">${seg.al} ${seg.fn.padEnd(4, ' ')}</span>  ${clsPadded}  /${seg.dep} ${seg.arr}  ${seg.depT} ${seg.arrT}  ${seg.eq}  ${seg.dur || '3:00'}`);
+      }
+      if(row2Cls){
+        rows.push(`             ${row2Cls}`);
+      }
     });
   });
 
@@ -1113,7 +1158,7 @@ function handleTK(cmd){
     const now = new Date();
     const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
     const todayStr = String(now.getDate()).padStart(2, '0') + months[now.getMonth()];
-    datePart = isOK ? todayStr : "13NOV";
+    datePart = todayStr;
   }
 
   const prefix = isOK ? "OK" : "TL";
@@ -1224,19 +1269,26 @@ function handleER(){
   state.hasPending = false;
   state.justEndedRecord = true; // Flag: on initial ER, don't show OPW/OPC or multi-line airport yet
 
-  // Auto-generate OPW/OPC for TG (Thai Airways ticketing deadlines)
-  if(primaryAl === 'TG' && (!state.opwRemarks || !state.opwRemarks.length)){
+  // Auto-generate OPW/OPC for TG & MH
+  if((primaryAl === 'TG' || primaryAl === 'MH') && (!state.opcRemarks || !state.opcRemarks.length)){
     const opwDate = new Date(now); opwDate.setDate(now.getDate() + 6);
-    const opcDate = new Date(now); opcDate.setDate(now.getDate() + 8);
+    const opcDate = new Date(now); opcDate.setDate(now.getDate() + 14);
     const opwStr = `${opwDate.getDate()}${months[opwDate.getMonth()]}`;
     const opcStr = `${opcDate.getDate()}${months[opcDate.getMonth()]}`;
-    const segNums = state.segments.map((_,i) => `S${i+2}`).join('/');
-    state.opwRemarks = [
-      `OPW-${opwStr}:2300/1C7/TG REQUIRES TICKET ON OR BEFORE\n        ${opcStr}:2300 DAC TIME ZONE/TKT/${segNums}`
-    ];
-    state.opcRemarks = [
-      `OPC-${opcStr}:2300/1C8/TG CANCELLATION DUE TO NO TICKET DAC TIME\n        ZONE/TKT/${segNums}`
-    ];
+    const segNums = state.segments.length > 1 ? `S2-${state.segments.length+1}` : `S2`;
+    if(primaryAl === 'TG'){
+      state.opwRemarks = [
+        `OPW-${opwStr}:2300/1C7/TG REQUIRES TICKET ON OR BEFORE\n        ${opcStr}:2300 DAC TIME ZONE/TKT/${segNums}`
+      ];
+      state.opcRemarks = [
+        `OPC-${opcStr}:2300/1C8/TG CANCELLATION DUE TO NO TICKET DAC TIME\n        ZONE/TKT/${segNums}`
+      ];
+    } else if(primaryAl === 'MH'){
+      // Matching real Amadeus line 142 of original app notepad:
+      state.opcRemarks = [
+        `OPC-${opcStr}:0800/1C8/MH CANCELLATION DUE TO NO TICKET ZZZ TIME\n        ZONE/TKT/${segNums}`
+      ];
+    }
   }
 
   renderPNR();
@@ -2543,6 +2595,11 @@ function mountInput(){
   });
 
   term.addEventListener('click', (e)=>{
+    // If user is selecting text (blocking) to copy, do NOT steal focus or clear selection!
+    const sel = window.getSelection ? window.getSelection() : null;
+    if(sel && sel.toString().trim().length > 0){
+      return;
+    }
     if(!e.target.classList.contains('seg-class-link')){
       input.focus();
     }

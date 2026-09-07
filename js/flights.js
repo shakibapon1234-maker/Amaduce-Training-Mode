@@ -248,8 +248,54 @@ function getFlightSchedule(orig, dest, date){
     };
   }
 
-  // 7. Dynamic Schedule Engine for ANY Other Pair in the World
-  // Ensures NO search between valid airport codes ever fails!
+  // 7. DAC-KUL (Dhaka - Kuala Lumpur) & Return (KUL-DAC): Exact Real Amadeus Schedules
+  if(key === "DACKUL" || revKey === "DACKUL"){
+    const isRev = (key !== "DACKUL");
+    if(!isRev){
+      // DAC -> KUL (Matching real Amadeus AN23DECDACKUL)
+      return {
+        date: dt,
+        lines: [
+          { line:1, segs:[{ al:"OD", fn:"161", classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,U:7}, dep:"DAC", arr:"KUL", termDep:"1", termArr:"1", depT:"0110", arrT:"0700", eq:"7M8", dur:"3:50" }] },
+          { line:2, segs:[{ al:"MH", fn:"103", classes:{J:7,C:6,D:6,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9}, dep:"DAC", arr:"KUL", termDep:"1", termArr:"1", depT:"1230", arrT:"1840", eq:"7M8", dur:"4:10" }] },
+          { line:3, segs:[{ al:"AK", fn:"070", classes:{S:"A",X:"A"}, dep:"DAC", arr:"KUL", termDep:"0", termArr:"2", depT:"2240", arrT:"0435+1", eq:"32Q", dur:"3:55" }] },
+          { line:4, segs:[{ al:"MH", fn:"197", classes:{J:9,C:9,D:9,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9}, dep:"DAC", arr:"KUL", termDep:"1", termArr:"1", depT:"2255", arrT:"0455+1", eq:"333", dur:"4:00" }] },
+          { line:5, segs:[{ al:"OD", fn:"165", classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,Q:7,T:9,U:7}, dep:"DAC", arr:"KUL", termDep:"1", termArr:"1", depT:"2310", arrT:"0500+1", eq:"7M8", dur:"3:50" }] },
+          { line:6, segs:[
+            { al:"TG", fn:"4823", codeShare:"TG:PG4823", classes:{C:4,D:4,Y:4,M:4,K:4,N:4,T:4,L:4,H:4,Q:4,V:4,G:4,B:4}, dep:"DAC", arr:"BKK", termDep:"2", depT:"1340", arrT:"1710", eq:"333" },
+            { al:"MH", fn:"4509", codeShare:"MH:PG4509", classes:{C:4,Y:7,M:7,K:7,N:7,T:7,L:7,H:7,Q:7,V:7,G:7,B:7}, dep:"BKK", arr:"KUL", termArr:"1", depT:"1840", arrT:"2200", eq:"73H", dur:"6:20" }
+          ]},
+          { line:7, segs:[
+            { al:"TG", fn:"322", classes:{C:9,D:9,J:9,Z:8,U:9,A:9,Y:9,B:9,M:9,H:9,Q:9,T:9,K:9,S:9,V:9,W:9}, dep:"DAC", arr:"BKK", termDep:"2", depT:"1340", arrT:"1710", eq:"333" },
+            { al:"MH", fn:"4717", codeShare:"MH:TG4717", classes:{C:4,D:4,J:4,Z:4,Y:9,B:9,M:9,H:9,Q:9,T:9,K:9,S:9,V:9,W:9,L:9}, dep:"BKK", arr:"KUL", termArr:"1", depT:"1840", arrT:"2200", eq:"73H", dur:"6:20" }
+          ]}
+        ]
+      };
+    } else {
+      // KUL -> DAC (Matching real Amadeus AN25DECKULDAC)
+      return {
+        date: dt,
+        lines: [
+          { line:1, segs:[{ al:"MH", fn:"102", classes:{J:9,C:9,D:9,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9}, dep:"KUL", arr:"DAC", termDep:"1", termArr:"1", depT:"0920", arrT:"1120", eq:"7M8", dur:"4:00" }] },
+          { line:2, segs:[{ al:"MH", fn:"196", classes:{J:8,C:7,D:7,I:2,Y:9,B:9,H:9,K:9,M:9,L:9,V:9,S:9,N:9,Q:9}, dep:"KUL", arr:"DAC", termDep:"1", termArr:"1", depT:"1950", arrT:"2155", eq:"7M8", dur:"4:05" }] },
+          { line:3, segs:[{ al:"AK", fn:"071", classes:{S:"A",X:"A"}, dep:"KUL", arr:"DAC", termDep:"2", termArr:"0", depT:"2005", arrT:"2200", eq:"32Q", dur:"3:55" }] },
+          { line:4, segs:[{ al:"OD", fn:"166", classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:7,N:7,U:3}, dep:"KUL", arr:"DAC", termDep:"1", termArr:"1", depT:"2020", arrT:"2210", eq:"7M8", dur:"3:50" }] },
+          { line:5, segs:[{ al:"OD", fn:"162", classes:{Y:7,A:7,W:7,S:7,B:7,H:7,K:7,L:7,M:9,U:3}, dep:"KUL", arr:"DAC", termDep:"1", termArr:"1", depT:"2220", arrT:"0010+1", eq:"7M8", dur:"3:50" }] },
+          { line:6, segs:[
+            { al:"TG", fn:"418", classes:{C:9,D:8,J:6,Y:9,B:9,M:9,H:9,Q:9,T:9,K:9,S:9,V:9}, dep:"KUL", arr:"BKK", termDep:"1", depT:"2105", arrT:"2210", eq:"789" },
+            { al:"TG", fn:"339", classes:{C:9,D:8,J:6,Y:9,B:9,M:9,H:9,Q:9,T:9,K:9,S:9,V:9}, dep:"BKK", arr:"DAC", termArr:"2", depT:"2315", arrT:"0050+1", eq:"320", dur:"5:45" }
+          ]},
+          { line:7, segs:[
+            { al:"SQ", fn:"121", classes:{Z:9,C:9,J:9,U:9,Y:9,B:9,E:9,M:9,H:9,W:9,Q:9,N:9}, dep:"KUL", arr:"SIN", termDep:"1", termArr:"0", depT:"1830", arrT:"1950", eq:"359" },
+            { al:"SQ", fn:"446", classes:{Z:9,C:9,J:9,U:9,Y:9,B:9,E:9,M:9,H:9,W:9,Q:9,N:9}, dep:"SIN", arr:"DAC", termDep:"2", termArr:"2", depT:"2040", arrT:"2240", eq:"787", dur:"6:10" }
+          ]}
+        ]
+      };
+    }
+  }
+
+  // 8. Dynamic Schedule Engine for ANY Other Pair in the World
+  // Ensures NO search between valid airport codes ever fails or produces KUL-KUL / DAC-DAC!
   const carriers = [
     { al:"QR", fn:"639", via:"DOH", eq:"77W", cEq:"359", depT:"0410", arrT:"0620", cDep:"0830", cArr:"1445" },
     { al:"EK", fn:"583", via:"DXB", eq:"77W", cEq:"388", depT:"0955", arrT:"1320", cDep:"1545", cArr:"2130" },
@@ -261,13 +307,33 @@ function getFlightSchedule(orig, dest, date){
     { al:"BG", fn:"088", via:"BKK", eq:"788", cEq:"777", depT:"0930", arrT:"1430", cDep:"1700", cArr:"2240" }
   ];
 
-  const lines = carriers.map((c, idx) => ({
-    line: idx + 1,
-    segs: [
-      { al: c.al, fn: c.fn, classes: STD_CLS_FULL, dep: o, arr: c.via, depT: c.depT, arrT: c.arrT, eq: c.eq, dur: "4:15" },
-      { al: c.al, fn: (parseInt(c.fn, 10) + 102).toString(), classes: STD_CLS_FULL, dep: c.via, arr: d, depT: c.cDep, arrT: c.cArr, eq: c.cEq, dur: "6:20" }
-    ]
-  }));
+  const lines = carriers.map((c, idx) => {
+    // If hub is either destination or origin, it is a direct flight!
+    if(c.via === d){
+      return {
+        line: idx + 1,
+        segs: [
+          { al: c.al, fn: c.fn, classes: STD_CLS_FULL, dep: o, arr: d, depT: c.depT, arrT: c.arrT, eq: c.eq, dur: "4:15" }
+        ]
+      };
+    }
+    if(c.via === o){
+      return {
+        line: idx + 1,
+        segs: [
+          { al: c.al, fn: c.fn, classes: STD_CLS_FULL, dep: o, arr: d, depT: c.depT, arrT: c.cArr, eq: c.eq, dur: "5:30" }
+        ]
+      };
+    }
+    // 1-stop connection
+    return {
+      line: idx + 1,
+      segs: [
+        { al: c.al, fn: c.fn, classes: STD_CLS_FULL, dep: o, arr: c.via, depT: c.depT, arrT: c.arrT, eq: c.eq, dur: "4:15" },
+        { al: c.al, fn: (parseInt(c.fn, 10) + 102).toString(), classes: STD_CLS_FULL, dep: c.via, arr: d, depT: c.cDep, arrT: c.cArr, eq: c.cEq, dur: "6:20" }
+      ]
+    };
+  });
 
   return { date: dt, lines: lines };
 }

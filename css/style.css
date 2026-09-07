@@ -268,10 +268,16 @@
     font-size: 14px;
     line-height: 1.45;
     color: #000;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+  }
+  .term-scroll ::selection, #term ::selection {
+    background: #0078d7;
+    color: #ffffff;
   }
   .term-scroll::-webkit-scrollbar { width: 8px; }
   .term-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-  .line { white-space: pre-wrap; word-break: break-word; }
+  .line { white-space: pre-wrap; word-break: break-word; user-select: text !important; -webkit-user-select: text !important; }
   .prompt-line { color: #000; font-weight: bold; }
   .prompt-line .chevron { color: #64748b; margin-right: 4px; }
   .out { margin: 2px 0 10px 0; }
