@@ -197,8 +197,8 @@ function scrollToLatestCommand(){
   if(!latestCommandPromptEl || !term) return;
   requestAnimationFrame(() => {
     if(latestCommandPromptEl && term){
-      // Snap latest command prompt cleanly to the top of the visible terminal viewport
-      term.scrollTop = Math.max(0, latestCommandPromptEl.offsetTop);
+      // Snap latest command prompt cleanly with 24px clearance so no letters are ever cut off
+      term.scrollTop = Math.max(0, latestCommandPromptEl.offsetTop - 24);
     }
   });
 }
@@ -326,11 +326,15 @@ function renderPNR(header){
   let idx = 1;
   // Passenger Lines (building mode uses space-padded single-digit " 1.NAME" matching Screenshot 1)
   if(isBuilding){
-    state.passengers.forEach((p, i)=>{
-      const pNum = (i + 1).toString().padStart(2, ' ');
-      rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
-      idx++;
-    });
+    if(state.passengers && state.passengers.length){
+      state.passengers.forEach((p, i)=>{
+        const pNum = (i + 1).toString().padStart(2, ' ');
+        rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
+        idx++;
+      });
+    } else {
+      rows.push(`<span class="warn" style="font-weight:bold;">** TO INSERT PASSENGER NAME: NM1SURNAME/FIRSTNAME TITLE (e.g. NM1SHAKIB/APON MR) **</span>`);
+    }
   } else {
     let paxLine = "";
     state.passengers.forEach((p, i)=>{
@@ -1015,7 +1019,15 @@ function handleAN(cmd, isDirect){
 }
 
 function handleSS(cmd){
-  const clean = cmd.replace(/\s+/g, '');
+  let clean = cmd.replace(/\s+/g, '');
+  let typoNotice = false;
+
+  // Autocorrect common OCR / keyboard typo where user typed letter 'I' or 'l' instead of number '1' (e.g. SSIJ12 -> SS1J12)
+  if(/^SS[Il]([A-Z]+\d+)/i.test(clean)){
+    clean = clean.replace(/^SS[Il]/i, 'SS1');
+    typoNotice = true;
+  }
+
   let m = clean.match(/^SS(\d+)([A-Z]+)(\d+)(\*)?$/i);
   if(!m){
     const alt = clean.match(/^SS(\d+)(\d+)([A-Z]+)$/i);
@@ -1024,8 +1036,16 @@ function handleSS(cmd){
     }
   }
   if(!m){
-    printLines(["INVALID FORMAT — try SS1W1, SS1N1, or SS1Y1"], 'err');
+    printLines([
+      "CHECK FORMAT — COMMAND NOT RECOGNISED",
+      "Amadeus Format: SS [SEATS 1-9] [CLASS] [LINE NUMBER]",
+      "Examples: SS1J12 (1 seat, J class, Line 12), SS1Y1, SS2M3",
+      "Tip: Make sure to type number 1 (not letter I) for 1 seat."
+    ], 'err');
     return;
+  }
+  if(typoNotice){
+    showToast(`✓ Auto-corrected 'I' to '1' -> SS1${m[2]}${m[3]}`);
   }
   const count = parseInt(m[1], 10);
   // Amadeus GDS individual booking limit is maximum 9 seats
@@ -1054,7 +1074,7 @@ function handleSS(cmd){
   }
 
   // If previous PNR was finalized or active with a saved locator, reset workspace for new holding
-  if(state.finalized || (state.locator && state.locator === "J99GZO" && state.passengers.length > 0)){
+  if(state.finalized || (state.locator && state.passengers.length > 0)){
     state.locator = null;
     state.passengers = [];
     state.segments = [];
@@ -2553,7 +2573,7 @@ function runCommand(raw){
   const clean = upper.replace(/\s+/g, '');
 
   if(/^A[ND]/i.test(clean) && clean.length >= 8) return handleAN(upper, clean.startsWith("AD"));
-  if(/^SS\d+[A-Z]+\d+/i.test(clean)) return handleSS(upper);
+  if(/^SS/i.test(clean)) return handleSS(upper);
   if(/^NM1/i.test(upper)) return handleNM(upper);
   if(/^AP\s/i.test(upper)) return handleAP(cmd);
   if(/^TK\s*(TL|OK)/i.test(upper)) return handleTK(upper);
@@ -2738,13 +2758,16 @@ function mountInput(){
   const old = document.querySelector('.inputRow');
   if(old) old.remove();
 
+  const isNeedPax = (state.segments && state.segments.length > 0) && (!state.passengers || state.passengers.length === 0);
+  const placeholderText = isNeedPax ? "Type passenger name (e.g. NM1SHAKIB/APON MR)..." : "Type an Amadeus command or click a booking class above...";
+
   const row = document.createElement('div');
   row.className = 'inputRow';
-  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Type an Amadeus command or click a booking class above...">`;
+  row.innerHTML = `<span class="chevron">&gt;</span><input id="cmdInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${placeholderText}">`;
   term.appendChild(row);
 
   const input = row.querySelector('#cmdInput');
-  input.focus();
+  input.focus({ preventScroll: true });
 
   input.addEventListener('input', ()=>{
     const pos = input.selectionStart;
@@ -2776,18 +2799,25 @@ function mountInput(){
     }
   });
 
+  initTermClickListener();
+  scrollToLatestCommand();
+}
+
+let termClickListenerAttached = false;
+function initTermClickListener(){
+  if(termClickListenerAttached || !term) return;
+  termClickListenerAttached = true;
   term.addEventListener('click', (e)=>{
     // If user is selecting text (blocking) to copy, do NOT steal focus or clear selection!
     const sel = window.getSelection ? window.getSelection() : null;
-    if(sel && sel.toString().trim().length > 0){
-      return;
-    }
+    if(sel && sel.toString().trim().length > 0) return;
     if(!e.target.classList.contains('seg-class-link')){
-      input.focus();
+      const activeInp = document.getElementById('cmdInput');
+      if(activeInp && document.activeElement !== activeInp){
+        activeInp.focus({ preventScroll: true });
+      }
     }
   });
-
-  scrollToLatestCommand();
 }
 
 // Action search bar on top
@@ -2800,6 +2830,47 @@ document.getElementById('actionSearchInput').addEventListener('keydown', (e)=>{
     }
   }
 });
+
+// Smart Keys Bar Runner
+window.runSmartCmd = function(cmd){
+  if(!cmd) return;
+  runCommand(cmd);
+  mountInput();
+};
+
+// Toggle Smart Keys toolbar visibility
+window.toggleSmartKeys = function(){
+  const bar = document.getElementById('smartKeysBar');
+  const restore = document.getElementById('smartKeysRestore');
+  if(!bar) return;
+  const isHidden = (bar.style.display === 'none' || bar.classList.contains('hidden'));
+  if(isHidden){
+    bar.style.display = 'flex';
+    bar.classList.remove('hidden');
+    if(restore) restore.style.display = 'none';
+  } else {
+    bar.style.display = 'none';
+    bar.classList.add('hidden');
+    if(restore) restore.style.display = 'flex';
+  }
+};
+
+// Toggle Right "Go To" Sidebar visibility
+window.toggleGotoSidebar = function(){
+  const sidebar = document.getElementById('gotoSidebar');
+  const tab = document.getElementById('gotoSidebarTab');
+  if(!sidebar) return;
+  const isHidden = (sidebar.style.display === 'none' || sidebar.classList.contains('hidden'));
+  if(isHidden){
+    sidebar.style.display = 'flex';
+    sidebar.classList.remove('hidden');
+    if(tab) tab.style.display = 'none';
+  } else {
+    sidebar.style.display = 'none';
+    sidebar.classList.add('hidden');
+    if(tab) tab.style.display = 'flex';
+  }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COMMAND HISTORY MODAL — matches original Amadeus "Command History" dialog

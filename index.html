@@ -13,7 +13,7 @@
   <div class="amad-header-left">
     <div class="amad-logo">amadeus <span>TRAINING</span></div>
     <div class="amad-nav-item">File ▾</div>
-    <div class="amad-nav-item">Smart Flows ▾</div>
+    <div class="amad-nav-item" onclick="toggleSmartKeys()" style="cursor:pointer;" title="Smart Keys Toolbar (Show/Hide)">⚡ Smart Keys / Flows ▾</div>
     <div class="amad-nav-item">Apps ▾</div>
   </div>
   <div class="amad-header-right">
@@ -91,6 +91,9 @@
 
   <button class="icon-nav-btn" onclick="alert('Amadeus Apps Catalogue')" title="Apps">
     <span>Apps ▾</span>
+  </button>
+  <button class="icon-nav-btn" onclick="toggleSmartKeys()" title="Toggle Smart Keys Toolbar" style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:11.5px;font-weight:700;color:#005a9c;border:1px solid #cbd5e1;background:#f0f9ff;border-radius:3px;cursor:pointer;">
+    <span>⚡ Smart Keys</span>
   </button>
   <button class="icon-nav-btn" onclick="switchToTab('cmd')" title="Command page">
     <span>&gt;_</span>
@@ -398,13 +401,14 @@
   <!-- Main Terminal Page (Command page) -->
   <div class="terminal-view">
     <!-- Smart Keys Bar (Matches Amadeus Selling Platform Connect) -->
-    <div class="smart-keys-bar">
+    <div class="smart-keys-bar" id="smartKeysBar">
       <span class="smart-keys-label">Smart Keys:</span>
       <button type="button" class="smart-btn" onclick="runSmartCmd('ET')" title="End Transaction">ET</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('ER')" title="End and Retrieve">ER</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('RT')" title="Retrieve PNR">RT</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('IG')" title="Ignore Transaction">IG</button>
       <button type="button" class="smart-btn" onclick="runSmartCmd('IR')" title="Ignore and Retrieve">IR</button>
+      <button type="button" class="smart-btn active-key" onclick="runSmartCmd('NM1SHAKIB/APON MR')" title="Insert Passenger Name: NM1SURNAME/FIRSTNAME TITLE">NM1</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('TKOK')" title="Ticketing OK Immediate (Screenshot 2)">TKOK</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('TKTL')" title="Ticketing Time Limit">TKTL</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FM7')" title="Add Commission 7% (Screenshot 1)">FM7</button>
@@ -420,17 +424,30 @@
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FXB')" title="Best Buy Pricing with Rebook">FXB</button>
       <button type="button" class="smart-btn active-key" onclick="runSmartCmd('FPINV')" title="Form of Payment Invoice">FPINV</button>
       <button type="button" class="smart-btn highlight-key" onclick="runSmartCmd('TTP')" title="Issue Electronic Ticket">TTP</button>
+      <button type="button" class="smart-btn-close" id="smartKeysCloseBtn" onclick="toggleSmartKeys()" title="Smart Keys bar লুকান">✕</button>
+    </div>
+    <!-- Smart Keys collapsed restore strip -->
+    <div class="smart-keys-restore" id="smartKeysRestore" style="display:none;" onclick="toggleSmartKeys()" title="Smart Keys bar দেখান">
+      <span style="display:inline-flex;align-items:center;gap:6px;color:#0284c7;font-weight:bold;cursor:pointer;padding:3px 8px;background:#e0f2fe;border:1px solid #bae6fd;border-radius:4px;">⚡ Smart Keys Toolbar লুকানো আছে — এখানে ক্লিক করে দেখান (Click to Show Smart Keys)</span>
     </div>
     <div class="term-scroll" id="term">
       <!-- Lines rendered by JS -->
     </div>
   </div>
 
+  <!-- Right "Go To" Sidebar toggle tab (visible when sidebar is hidden) -->
+  <div class="goto-sidebar-tab" id="gotoSidebarTab" style="display:none;" onclick="toggleGotoSidebar()" title="Go To panel দেখান">
+    <span>&#8249; Go To</span>
+  </div>
+
   <!-- Right "Go To" Sidebar -->
-  <div class="goto-sidebar">
+  <div class="goto-sidebar" id="gotoSidebar">
     <div class="goto-header">
       <span>Go To</span>
-      <span>▲</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:10px; color:#64748b;">›</span>
+        <button type="button" class="goto-close-btn" onclick="toggleGotoSidebar()" title="Sidebar বন্ধ করুন">✕</button>
+      </div>
     </div>
     <div class="goto-section">
       <div class="goto-title">Show in Graphic Mode</div>

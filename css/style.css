@@ -441,6 +441,43 @@
     overflow-x: auto;
     white-space: nowrap;
     user-select: none;
+    flex-shrink: 0;
+  }
+  .smart-keys-bar.hidden {
+    display: none;
+  }
+  .smart-keys-restore {
+    background: #e2e8f0;
+    border-bottom: 1px solid #cbd5e1;
+    padding: 2px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    display: none;
+  }
+  .smart-keys-restore:hover {
+    background: #d0d8e4;
+    color: #1e293b;
+  }
+  .smart-btn-close {
+    margin-left: auto;
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid #94a3b8;
+    border-radius: 3px;
+    color: #64748b;
+    font-size: 11px;
+    padding: 1px 5px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .smart-btn-close:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #ef4444;
   }
   .smart-keys-label {
     font-size: 10px;
@@ -516,6 +553,12 @@
     flex: 1; border: none; outline: none; font-family: inherit; font-size: 14px;
     background: transparent; color: #000; font-weight: bold;
   }
+  .inputRow input::placeholder {
+    color: #94a3b8 !important;
+    font-weight: normal !important;
+    font-style: italic !important;
+    opacity: 0.65 !important;
+  }
 
   /* --- Right Sidebar "Go To" --- */
   .goto-sidebar {
@@ -527,6 +570,47 @@
     flex-shrink: 0;
     font-size: 12px;
     overflow-y: auto;
+    transition: width 0.2s ease;
+  }
+  .goto-sidebar.hidden {
+    display: none;
+  }
+  /* Collapsed tab visible when sidebar is hidden */
+  .goto-sidebar-tab {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    background: #e2e8f0;
+    border-left: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 12px 4px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.5px;
+  }
+  .goto-sidebar-tab:hover {
+    background: #d0d8e4;
+    color: #0f172a;
+  }
+  .goto-close-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    color: #94a3b8;
+    font-size: 12px;
+    padding: 0 4px;
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .goto-close-btn:hover {
+    background: #fee2e2;
+    color: #ef4444;
+    border-color: #ef4444;
   }
   .goto-header {
     background: #e2e8f0;
@@ -537,6 +621,7 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #cbd5e1;
+    cursor: default;
   }
   .goto-section {
     padding: 10px 12px;

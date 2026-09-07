@@ -569,12 +569,28 @@ function openQuickPax(){
           <label style="font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">EMAIL*</label>
           <input type="text" id="quickEmail" placeholder="shakibapon1234@gmail.com" class="gui-input" value="shakibapon1234@gmail.com">
         </div>
+        <div style="background:#e0f2fe;border:1px solid #7dd3fc;border-radius:4px;padding:8px 10px;margin-bottom:14px;font-size:12px;color:#0369a1;font-family:Consolas,monospace;">
+          <b>Amadeus Command:</b> <span id="quickCmdPreview">&gt; NM1SHAKIB/APON MR</span>
+        </div>
         <div class="gui-modal-actions">
-          <button class="btn-modal-pax" style="flex:1;" onclick="submitQuickPax()">✓ Save & Create PNR</button>
+          <button class="btn-modal-pax" style="flex:1;" onclick="submitQuickPax()">✓ Insert Name &amp; View Command</button>
         </div>
       </div>
     </div>`;
   modal.style.display = 'flex';
+
+  // Live update preview
+  const updatePreview = () => {
+    const s = (document.getElementById('quickSurname')?.value || 'SURNAME').trim().toUpperCase();
+    const f = (document.getElementById('quickFirst')?.value || 'FIRSTNAME').trim().toUpperCase();
+    const t = document.getElementById('quickTitle')?.value || 'MR';
+    const preview = document.getElementById('quickCmdPreview');
+    if(preview) preview.textContent = `> NM1${s}/${f} ${t}`;
+  };
+  ['quickSurname', 'quickFirst', 'quickTitle'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updatePreview);
+    document.getElementById(id)?.addEventListener('change', updatePreview);
+  });
 }
 
 function closeQuickPaxModal(){
@@ -589,18 +605,25 @@ function submitQuickPax(){
   const phone   = (document.getElementById('quickPhone')?.value   || '01757208244').trim();
   const email   = (document.getElementById('quickEmail')?.value   || 'shakibapon1234@gmail.com').trim();
 
-  handleNM(`NM1${surname}/${first} ${title}`);
-  handleAP(`AP WINGS FLY ${phone}`);
-  if(!state.specialSSRs) state.specialSSRs = [];
-  const al = (state.segments && state.segments[0]) ? state.segments[0].al : 'TG';
-  state.specialSSRs.push({ type:'CTCM', al, status:'HK1', value: phone,              pax:'P1' });
-  state.specialSSRs.push({ type:'CTCE', al, status:'HK1', value: email.replace('@','//'), pax:'P1' });
-  handleTK('TKTL');
-  state.rfEntry = surname;
-  handleER();
   closeQuickPaxModal();
   switchToTab('cmd');
-  showToast(`✅ PNR Created: ${state.locator}`);
+
+  const nmCmd = `NM1${surname}/${first} ${title}`;
+  // Run command through runCommand so that the Amadeus prompt echo (> NM1...) is visually printed and saved to history!
+  runCommand(nmCmd);
+
+  if(phone){
+    const al = (state.segments && state.segments[0]) ? state.segments[0].al : 'TG';
+    if(!state.specialSSRs) state.specialSSRs = [];
+    if(!state.specialSSRs.some(s => s.type === 'CTCM')){
+      state.specialSSRs.push({ type:'CTCM', al, status:'HK1', value: phone, pax:'P1' });
+    }
+    if(email && !state.specialSSRs.some(s => s.type === 'CTCE')){
+      state.specialSSRs.push({ type:'CTCE', al, status:'HK1', value: email.replace('@','//'), pax:'P1' });
+    }
+  }
+  mountInput();
+  showToast(`✓ Name command executed: ${nmCmd}`);
 }
 
 // -------------------------------------------------------
