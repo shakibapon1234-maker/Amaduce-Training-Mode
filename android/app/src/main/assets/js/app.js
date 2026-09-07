@@ -1269,12 +1269,12 @@ function handleER(){
   state.hasPending = false;
   state.justEndedRecord = true; // Flag: on initial ER, don't show OPW/OPC or multi-line airport yet
 
-  // Auto-generate OPW/OPC for TG & MH
-  if((primaryAl === 'TG' || primaryAl === 'MH') && (!state.opcRemarks || !state.opcRemarks.length)){
-    const opwDate = new Date(now); opwDate.setDate(now.getDate() + 6);
-    const opcDate = new Date(now); opcDate.setDate(now.getDate() + 14);
-    const opwStr = `${opwDate.getDate()}${months[opwDate.getMonth()]}`;
-    const opcStr = `${opcDate.getDate()}${months[opcDate.getMonth()]}`;
+  // Auto-generate OPW/OPC for TG, MH, SV and all other airlines
+  if(!state.opcRemarks || !state.opcRemarks.length){
+    const opwDate = new Date(now); opwDate.setDate(now.getDate() + 1);
+    const opcDate = new Date(now); opcDate.setDate(now.getDate() + 3);
+    const opwStr = `${String(opwDate.getDate()).padStart(2,'0')}${months[opwDate.getMonth()]}`;
+    const opcStr = `${String(opcDate.getDate()).padStart(2,'0')}${months[opcDate.getMonth()]}`;
     const segNums = state.segments.length > 1 ? `S2-${state.segments.length+1}` : `S2`;
     if(primaryAl === 'TG'){
       state.opwRemarks = [
@@ -1284,9 +1284,15 @@ function handleER(){
         `OPC-${opcStr}:2300/1C8/TG CANCELLATION DUE TO NO TICKET DAC TIME\n        ZONE/TKT/${segNums}`
       ];
     } else if(primaryAl === 'MH'){
-      // Matching real Amadeus line 142 of original app notepad:
       state.opcRemarks = [
         `OPC-${opcStr}:0800/1C8/MH CANCELLATION DUE TO NO TICKET ZZZ TIME\n        ZONE/TKT/${segNums}`
+      ];
+    } else {
+      state.opwRemarks = [
+        `OPW-${opwStr}:2300/1C7/${primaryAl||'1A'} REQUIRES TICKET ON OR BEFORE\n        ${opwStr}${yrStr}:2300 TIME ZONE OF POS / OTHERWISE WILL BE XLD`
+      ];
+      state.opcRemarks = [
+        `OPC-${opcStr}:2300/1C8/${primaryAl||'1A'} CANCELLATION DUE TO NO TICKET DAC TIME\n        ZONE/TKT/${segNums}`
       ];
     }
   }
@@ -1315,7 +1321,8 @@ function handleIR(){
   const agCode = state.agentCode || 'SS/GS';
   const dt = state.dateStamp || '17JUN26/1324Z';
   const headerLine2 = state.erHeaderLine2 || state.headerLine2 || '';
-  const header = `--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode}   ${dt}   <span class="locator">${state.locator}</span>${headerLine2 ? '\n' + headerLine2 : ''}`;
+  const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR ---`;
+  const header = `${rlrHeader}\nRP/${currOffice}/${currOffice}            ${agCode}   ${dt}   <span class="locator">${state.locator}</span>${headerLine2 ? '\n' + headerLine2 : ''}`;
   renderPNR(header);
 }
 
