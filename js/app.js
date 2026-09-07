@@ -191,37 +191,40 @@ function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
   const sNum = segLineNum.toString().padStart(2, ' ');
   const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map for this flight (${seg.al} ${seg.fn})">${seg.cls}</span>`;
 
+  const depT = seg.depT || '0000';
+  const arrT = seg.arrT || '0000';
+  const timeStr = `${depT} ${arrT}`;
+  const dateStr = seg.date || '12NOV';
+  const dayStr = seg.day || getDayOfWeek(dateStr);
+  const fnPadded = seg.fn.toString().length < 4 ? seg.fn.toString().padStart(3, ' ') : seg.fn.toString();
+  const stCount = `${seg.status || 'HK'}${seg.count || 1}`;
+
+  // Thai Airways (TG): Exact match to YouTube tutorial
+  if(seg.al === 'TG'){
+    const connCol = (totalSegs > 1 && sIdx === 0) ? '        2 ' : '          ';
+    lines.push(
+      `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}${connCol}${timeStr}`
+    );
+    lines.push(`    SEE RTSVC`);
+    return lines;
+  }
+
+  // Other airlines (e.g. QR / SQ)
   let connCol = '       ';
   if(totalSegs > 1){
     connCol = (sIdx === 0) ? '       1  ' : '          ';
   }
-
   const eq = seg.eq || '77W';
-  const depT = seg.depT || '0000';
-  const arrT = seg.arrT || '0000';
-  const timeStr = `${depT} ${arrT}`;
   const timeSpacing = arrT.includes('+') ? '  ' : '   ';
-  const dateStr = seg.date || '12NOV';
-  const dayStr = seg.day || getDayOfWeek(dateStr);
-  const fnPadded = seg.fn.toString().length < 4 ? seg.fn.toString().padStart(3, ' ') : seg.fn.toString();
-
-  // Primary flight segment line (Exact alignment matching Amadeus Screenshot 1)
   lines.push(
-    `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${seg.status || 'HK'}${seg.count || 1}${connCol}${timeStr}${timeSpacing}${eq} E 0 M`
+    `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}${connCol}${timeStr}${timeSpacing}${eq} E 0 M`
   );
-
-  // Mandatory advisory lines (Matches real Amadeus Screenshot 1 for all airlines)
   lines.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
   lines.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
-
-  // Starlink in-flight connectivity line
   if(['77W', '787', '359'].includes(eq) && (sIdx === 0 || seg.al === 'SQ' || (seg.al === 'QR' && eq === '77W'))){
     lines.push(`    STARLINK ENABLED`);
   }
-
-  // Real Amadeus service routing line
   lines.push(`    SEE RTSVC`);
-
   return lines;
 }
 
@@ -849,12 +852,32 @@ function handleAN(cmd, isDirect){
 
 function handleSS(cmd){
   const clean = cmd.replace(/\s+/g, '');
-  const m = clean.match(/^SS(\d+)([A-Z]+)(\d+)(\*)?$/i);
+  let m = clean.match(/^SS(\d+)([A-Z]+)(\d+)(\*)?$/i);
   if(!m){
-    printLines(["INVALID FORMAT — try SS1Y1, SS1T1, or SS2K2"], 'err');
+    const alt = clean.match(/^SS(\d+)(\d+)([A-Z]+)$/i);
+    if(alt){
+      m = [clean, alt[2], alt[3], alt[1]];
+    }
+  }
+  if(!m){
+    printLines(["INVALID FORMAT — try SS1W1, SS1N1, or SS1Y1"], 'err');
     return;
   }
   const count = parseInt(m[1], 10);
+  // Amadeus GDS individual booking limit is maximum 9 seats
+  if(count > 9){
+    printLines([
+      `MAX 9 SEATS PER TRANSACTION — FORMAT ERROR`,
+      `ENTERED SEAT COUNT (${count}) EXCEEDS GDS LIMIT (MAX 9 SEATS)`,
+      `Format: SS [SEATS] [CLASS] [LINE] (e.g. SS1W1, SS1N1, or SS2K2)`
+    ], 'err');
+    showToast(`Invalid seat count (${count}) — Max 9 allowed`, 'warn');
+    return;
+  }
+  if(count < 1){
+    printLines([`INVALID NUMBER OF SEATS — MUST BE AT LEAST 1`], 'err');
+    return;
+  }
   const cls = m[2].toUpperCase();
   const lineNum = parseInt(m[3], 10);
 
@@ -1395,11 +1418,62 @@ function handleSRDOCS(upper, rawCmd){
   const surname     = tokens[7] || '';
   const firstName   = tokens.slice(8).join(' ') || '';
 
-  const isInfant = gender.includes('I') || pax.includes('INF') || pax === 'P3';
-  const isChild  = pax === 'P2';
+  // 1. Check if passengers exist in PNR
+  if (!state.passengers || !state.passengers.length) {
+    printLines([
+      'NO PASSENGER IN WORKSPACE',
+      'ENTER PASSENGER NAME FIRST (e.g. NM1SURNAME/FIRSTNAME MR)'
+    ], 'err');
+    showToast('Enter passenger name before adding DOCS', 'warn');
+    return;
+  }
+
+  // 2. Identify target passenger number (default P1)
+  let targetPaxNum = 1;
+  if (pax) {
+    const pMatch = pax.match(/P(\d+)/i);
+    if (pMatch) targetPaxNum = parseInt(pMatch[1], 10);
+  }
+
+  const targetPax = state.passengers[targetPaxNum - 1];
+  if (!targetPax) {
+    printLines([
+      `PASSENGER P${targetPaxNum} NOT FOUND IN PNR`,
+      `CURRENT PASSENGERS: ${state.passengers.length} (P1${state.passengers.length > 1 ? ' - P' + state.passengers.length : ''})`
+    ], 'err');
+    showToast(`Passenger P${targetPaxNum} does not exist in PNR`, 'warn');
+    return;
+  }
+
+  // 3. Check for Infant / Adult / Child mismatch
+  const isInfantGender = (gender === 'MI' || gender === 'FI' || gender === 'I');
+  const isInfantSuffix = pax.includes('INF');
+  const isInfant = isInfantGender || isInfantSuffix;
+  const isChild  = (targetPax.type === 'child');
+
+  // If user enters Infant DOCS on an adult passenger who has NO infant associated:
+  if (isInfant && targetPax.type !== 'infantCarrier' && !targetPax.infant) {
+    printLines([
+      `NO INFANT ASSOCIATED TO PASSENGER ${targetPaxNum}`,
+      `PASSENGER ${targetPaxNum} IS REGISTERED AS ADULT (${targetPax.nameDisplay || targetPax.label})`,
+      `USE ADULT GENDER M OR F (NOT MI/FI/INF), OR ENTER INFANT IN NAME FIRST`
+    ], 'err');
+    showToast(`Error: P${targetPaxNum} has no associated infant`, 'warn');
+    return;
+  }
+
+  // If user enters Infant DOCS on a Child passenger:
+  if (isInfant && targetPax.type === 'child') {
+    printLines([
+      `PASSENGER TYPE MISMATCH — P${targetPaxNum} IS A CHILD, NOT AN INFANT`,
+      `USE GENDER M OR F FOR CHILD DOCS (NOT MI/FI)`
+    ], 'err');
+    showToast(`Error: P${targetPaxNum} is a Child, not an Infant`, 'warn');
+    return;
+  }
 
   if(!pax){
-    pax = isInfant ? 'P1/INF' : (isChild ? 'P2' : 'P1');
+    pax = isInfant ? `P${targetPaxNum}/INF` : `P${targetPaxNum}`;
   }
 
   if(!state.docsEntries) state.docsEntries = [];
