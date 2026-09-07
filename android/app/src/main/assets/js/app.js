@@ -186,26 +186,49 @@ function printPromptEcho(cmd){
 
 // Render PNR exactly matching Screenshot 1 with clickable booking class links
 // Helper to render authentic Amadeus building segment lines with mandatory advisory lines (Screenshot 1)
+// Helper: compute next-day date string from a base date string like "23NOV"
+function getNextDayDate(dateStr) {
+  const m = (dateStr || '').match(/^(\d{1,2})([A-Z]{3})/i);
+  if (!m) return '';
+  const months = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+  const monthNames = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const day = parseInt(m[1], 10);
+  const mon = m[2].toUpperCase();
+  const monIdx = months[mon];
+  if (monIdx === undefined) return '';
+  const d = new Date(2026, monIdx, day + 1);
+  return `${d.getDate()}${monthNames[d.getMonth()]}`;
+}
+
 function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
   const lines = [];
   const sNum = segLineNum.toString().padStart(2, ' ');
   const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map for this flight (${seg.al} ${seg.fn})">${seg.cls}</span>`;
 
   const depT = seg.depT || '0000';
-  const arrT = seg.arrT || '0000';
-  const timeStr = `${depT} ${arrT}`;
+  const rawArrT = seg.arrT || '0000';
+  const isNextDay = rawArrT.includes('+1');
+  // Display arrival time without '+1' suffix
+  const arrTClean = rawArrT.replace(/\+\d+$/, '');
+  const timeStr = `${depT} ${arrTClean}`;
   const dateStr = seg.date || '12NOV';
   const dayStr = seg.day || getDayOfWeek(dateStr);
   const fnPadded = seg.fn.toString().length < 4 ? seg.fn.toString().padStart(3, ' ') : seg.fn.toString();
-  const stCount = `${seg.status || 'HK'}${seg.count || 1}`;
+  const stCount = `${seg.status || 'DK'}${seg.count || 1}`;
+  const eq = seg.eq || '77W';
 
-  // Thai Airways (TG): Exact match to YouTube tutorial
+  // Compute next-day arrival date string if applicable
+  const arrDateStr = isNextDay ? getNextDayDate(dateStr) : '';
+  // Spacing: after times, either show arrival date or spaces, then equipment
+  // Format: depT arrTClean   [arrDate ]E 0 [eq] M
+  const afterTimes = isNextDay ? `   ${arrDateStr} E 0 ${eq} M` : `   E 0 ${eq} M`;
+
+  // Thai Airways (TG): exact spacing matching real Amadeus
   if(seg.al === 'TG'){
-    const connCol = (totalSegs > 1 && sIdx === 0) ? '        2 ' : '          ';
     lines.push(
-      `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}${connCol}${timeStr}`
+      `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}  ${timeStr}  ${arrDateStr ? arrDateStr + '  ' : ''}E  0 ${eq} M`
     );
-    lines.push(`    SEE RTSVC`);
+    lines.push(`     SEE RTSVC`);
     return lines;
   }
 
@@ -214,10 +237,8 @@ function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
   if(totalSegs > 1){
     connCol = (sIdx === 0) ? '       1  ' : '          ';
   }
-  const eq = seg.eq || '77W';
-  const timeSpacing = arrT.includes('+') ? '  ' : '   ';
   lines.push(
-    `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}${connCol}${timeStr}${timeSpacing}${eq} E 0 M`
+    `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${stCount}${connCol}${timeStr}${afterTimes}`
   );
   lines.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
   lines.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
@@ -250,14 +271,20 @@ function renderPNR(header){
   } else if(isBuilding) {
     const currOffice = state.officeId || OFFICE_ID;
     rows.push(`RP/${currOffice}/`);
+    // RF line appears right after RP/ in building mode
+    if(state.rfEntry){
+      rows.push(`RF ${state.rfEntry}`);
+    }
   } else {
     const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR ---`;
     rows.push(rlrHeader);
     const currOffice = state.officeId || OFFICE_ID;
-    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'MM/GS');
-    rows.push(`RP/${currOffice}/${currOffice}          ${agCode}   ${state.dateStamp||"13NOV24/1435Z"}   <span class="locator">${state.locator||"J99GZO"}</span>`);
-    if(state.headerLine2){
-      rows.push(state.headerLine2);
+    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'SS/GS');
+    rows.push(`RP/${currOffice}/${currOffice}            ${agCode}   ${state.dateStamp||"13NOV24/1435Z"}   <span class="locator">${state.locator||"J99GZO"}</span>`);
+    // Second header line (e.g. DACVS33GT/0002TG/7SEP26)
+    const line2 = state.erHeaderLine2 || state.headerLine2;
+    if(line2){
+      rows.push(line2);
     }
   }
 
@@ -292,20 +319,64 @@ function renderPNR(header){
       const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum);
       segLines.forEach(l => rows.push(l));
     } else {
-      const day = seg.day || "2*";
-      const dateStr = seg.date || "25MAR";
-      // Real Amadeus shows "*1A/E*" for confirmed HK segments after ER/IR
-      // Format: " 2  QR 639 N 20MAY 3 DACDOH HK1    1  0410 0620   *1A/E*"
+      const day = seg.day || '2*';
+      const dateStr = seg.date || '25MAR';
       const isHK = (seg.status === 'HK');
-      const countStr = isHK ? seg.count.toString().padStart(4, ' ') : `  ${seg.count}`;
-      const endCode = isHK ? `  *1A/E*` : `  ${seg.tktCode || 'TK/VB7BHH'}`;
+      // After ER: use confirmedEndCode (E  TG/LOCATOR) format
+      // For pre-loaded PNRs (Lesson/Thai): keep *1A/E* format
+      const rawArrT = seg.arrT || '0000';
+      const isNextDay = rawArrT.includes('+1');
+      const arrTClean = rawArrT.replace(/\+\d+$/, '');
+      const arrDateStr = isNextDay ? getNextDayDate(dateStr) : '';
+      // Build the time+arrdate portion
+      const timeAndDate = isNextDay
+        ? `${seg.depT} ${arrTClean}  ${arrDateStr} `
+        : `${seg.depT} ${seg.arrT}  `;
 
-      rows.push(
-        `${segLineNum.toString().padStart(2, ' ')}  ` +
-        `<span class="al">${seg.al} ${seg.fn}</span> ` +
-        `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
-        `${seg.status}${countStr}  ${seg.depT} ${seg.arrT}${endCode}`
-      );
+      let endCode;
+      if(seg.confirmedEndCode){
+        // User-booked segments: E  TG/92C57S format
+        endCode = `  ${timeAndDate}${seg.confirmedEndCode}`;
+      } else if(isHK){
+        // Pre-loaded lesson PNRs: *1A/E* format
+        endCode = `  ${seg.depT} ${seg.arrT}  *1A/E*`;
+      } else {
+        endCode = `  ${seg.depT} ${seg.arrT}  ${seg.tktCode || 'TK/VB7BHH'}`;
+      }
+
+      const countStr = isHK ? seg.count.toString().padStart(4, ' ') : `  ${seg.count}`;
+
+      if(seg.confirmedEndCode){
+        const fnPadded = seg.fn.toString().length < 4 ? seg.fn.toString().padStart(3, ' ') : seg.fn.toString();
+        if(!state.justEndedRecord && seg.al === 'TG'){
+          // Multi-line airport display for TG on IR / RT (matches real Amadeus transcript)
+          const destName = seg.arr === 'DAC' ? 'DHAKA, HAZRAT SHAHJALAL INTL' : `${seg.arr} INTL`;
+          rows.push(
+            `${segLineNum.toString().padStart(2, ' ')}  ` +
+            `<span class="al">${seg.al} ${fnPadded}</span> ` +
+            `${classLink} ${dateStr} ${day} ${seg.dep}${seg.arr}`
+          );
+          rows.push(destName);
+          rows.push(
+            ` HK${seg.count}  ${timeAndDate}${seg.confirmedEndCode}`
+          );
+        } else {
+          // Single-line confirmed format (ER display or other airlines):
+          rows.push(
+            `${segLineNum.toString().padStart(2, ' ')}  ` +
+            `<span class="al">${seg.al} ${fnPadded}</span> ` +
+            `${classLink} ${dateStr} ${day} ${seg.dep}${seg.arr} ` +
+            `HK${seg.count}  ${timeAndDate}${seg.confirmedEndCode}`
+          );
+        }
+      } else {
+        rows.push(
+          `${segLineNum.toString().padStart(2, ' ')}  ` +
+          `<span class="al">${seg.al} ${seg.fn}</span> ` +
+          `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
+          `${seg.status}${countStr}${endCode}`
+        );
+      }
     }
   });
 
@@ -360,7 +431,8 @@ function renderPNR(header){
 
   // First: CTCE and CTCM (contact SSRs â€” one line per passenger each)
   specialList.filter(s => s.type === 'CTCE' || s.type === 'CTCM').forEach(s=>{
-    rows.push(`${idx.toString().padStart(2, ' ')}  SSR ${s.type} ${s.al} ${s.status} ${s.value}/${s.pax}`);
+    const paxSuffix = (state.passengers && state.passengers.length > 1) ? `/${s.pax}` : '';
+    rows.push(`${idx.toString().padStart(2, ' ')}  SSR ${s.type} ${s.al} ${s.status} ${s.value}${paxSuffix}`);
     idx++;
   });
 
@@ -428,9 +500,17 @@ function renderPNR(header){
     rows.push(`${idx.toString().padStart(2, ' ')}  FM INF *F*7.00N/S3-4/P2`); idx++;
   }
 
-  // ---------- OPW Remarks (Screenshot 1 Line 18) ----------
-  if(state.opwRemarks && state.opwRemarks.length){
+  // ---------- OPW Remarks (ticketing deadline) ----------
+  if(!state.justEndedRecord && state.opwRemarks && state.opwRemarks.length){
     state.opwRemarks.forEach(r => {
+      rows.push(`${idx.toString().padStart(2, ' ')}  ${r}`);
+      idx++;
+    });
+  }
+
+  // ---------- OPC Remarks (cancellation deadline) ----------
+  if(!state.justEndedRecord && state.opcRemarks && state.opcRemarks.length){
+    state.opcRemarks.forEach(r => {
       rows.push(`${idx.toString().padStart(2, ' ')}  ${r}`);
       idx++;
     });
@@ -920,7 +1000,7 @@ function handleSS(cmd){
     eq: s.eq || '77W',
     date: heldDate,
     day: dayStr,
-    status: 'HK',
+    status: 'DK',
     fullDate: `${heldDate} 2026`,
     tktCode: `${s.al}/VB7BHH`
   }));
@@ -950,7 +1030,7 @@ function handleSS(cmd){
 
   printLines(rows, '');
   updateTopPnrInfo();
-  showToast(`✓ Held ${count} seat(s) on ${newSegs.map(s => s.al + ' ' + s.fn).join(', ')} (Status: HK${count})`);
+  showToast(`✓ Held ${count} seat(s) on ${newSegs.map(s => s.al + ' ' + s.fn).join(', ')} (Status: DK${count})`);
 }
 
 function handleNM(cmd){
@@ -998,59 +1078,8 @@ function handleNM(cmd){
 }
 
 function renderBuildingPNRAfterNM(newPax){
-  if(state.locator){
-    renderPNR(`RP/${OFFICE_ID}/`);
-    return;
-  }
   if(state.segments && state.segments.length){
-    const rows = [];
-    const currOffice = state.officeId || OFFICE_ID;
-    rows.push(`RP/${currOffice}/`);
-
-    // Passenger lines (aligned with space for single digit e.g. " 1.NAME" matching Screenshot 1)
-    state.passengers.forEach((p, i) => {
-      const pNum = (i + 1).toString().padStart(2, ' ');
-      rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
-    });
-
-    // Flight segment lines with full details and mandatory advisory lines (Screenshot 1)
-    let lineIdx = state.passengers.length + 1;
-    const totalSegs = state.segments.length;
-    state.segments.forEach((seg, sIdx) => {
-      const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, lineIdx++);
-      segLines.forEach(l => rows.push(l));
-    });
-
-    // Display AP if already present
-    if(state.phone){
-      rows.push(`${lineIdx.toString().padStart(2, ' ')}  AP ${esc(state.phone)}`);
-      lineIdx++;
-    }
-
-    // Display TK if already present
-    if(state.ticketing){
-      rows.push(`${lineIdx.toString().padStart(2, ' ')}  TK ${esc(state.ticketing)}`);
-      lineIdx++;
-    }
-
-    // Display Special SSRs if already present
-    if(state.specialSSRs && state.specialSSRs.length){
-      state.specialSSRs.forEach(s => {
-        rows.push(`${lineIdx.toString().padStart(2, ' ')}  SSR ${s.type} ${s.al} ${s.status} ${s.value}/${s.pax}`);
-        lineIdx++;
-      });
-    }
-
-    // Display SSR DOCS if already present
-    if(state.docsEntries && state.docsEntries.length){
-      state.docsEntries.forEach(d => {
-        const paxSuffix = (state.passengers.length > 1 || d.pax !== 'P1') ? `/${d.pax}` : '';
-        rows.push(`${lineIdx.toString().padStart(2, ' ')}  SSR DOCS ${d.airline} ${d.action} ${d.docType}/${d.country}/${d.docNumber}/${d.nationality}/${d.dob}/${d.gender}/${d.expiry}/${d.surname}/${d.firstName}${paxSuffix}`);
-        lineIdx++;
-      });
-    }
-
-    printLines(rows, '');
+    renderPNR();
   } else {
     printLines([`<span class="name">${esc(newPax.nameDisplay)} *</span>`], '');
   }
@@ -1060,13 +1089,8 @@ function renderBuildingPNRAfterNM(newPax){
 
 function handleAP(cmd){
   state.phone = cmd.replace(/^AP\s*/i, '').trim();
-  if(!state.locator){
-    const lineNum = (state.passengers.length || 0) + (state.segments.length || 0) + 1;
-    printLines([`${lineNum.toString().padStart(2, ' ')}  AP ${esc(state.phone)}`], 'success');
-  } else {
-    renderPNR();
-  }
-  showToast(`âœ“ AP contact added`);
+  renderPNR();
+  showToast(`✓ AP contact added`);
 }
 
 function handleTK(cmd){
@@ -1086,7 +1110,10 @@ function handleTK(cmd){
     }
   }
   if(!datePart){
-    datePart = isOK ? "18Jun26" : "13NOV";
+    const now = new Date();
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const todayStr = String(now.getDate()).padStart(2, '0') + months[now.getMonth()];
+    datePart = isOK ? todayStr : "13NOV";
   }
 
   const prefix = isOK ? "OK" : "TL";
@@ -1096,15 +1123,8 @@ function handleTK(cmd){
     state.ticketing = `${prefix}${datePart}/${currentOffice}`;
   }
 
-  // Interactive building feedback (Screenshot 2: 4  OK18Jun26  DACVS31XW)
-  if(!state.locator){
-    const lineNum = (state.passengers.length || 0) + (state.segments.length || 0) + (state.phone ? 1 : 0) + 1;
-    const tkDisplay = `${prefix}${datePart}  ${currentOffice}`;
-    printLines([`${lineNum.toString().padStart(2, ' ')}  ${tkDisplay}`], 'success');
-  } else {
-    renderPNR();
-  }
-  showToast(`âœ… Ticketing set: TK ${state.ticketing}`);
+  renderPNR();
+  showToast(`✅ Ticketing set: TK ${state.ticketing}`);
 }
 
 // ---------- FM â€” Fare Modifier / Commission (Screenshot 1: FM7) ----------
@@ -1115,17 +1135,20 @@ function handleFM(cmd){
   state.commission = val + "%";
   state.hasPending = true;
   printLines(["Commission already added"], 'success');
-  showToast(`âœ“ Commission ${state.commission} added (FM)`);
+  showToast(`✓ Commission ${state.commission} added (FM)`);
 }
 
 function handleRF(cmd){
   const rf = cmd.replace(/^RF\s*/i, '').trim() || 'R';
   state.receivedFrom = rf;
-  const agencyText = state.phone || `DAC JHONY TECH TRAVEL CTC0505793144`;
-  printLines([
-    `PNRs received by Agency: ${agencyText}`
-  ], 'success');
-  showToast(`âœ“ Received From (${rf}) saved`);
+  state.rfEntry = rf.toUpperCase(); // store e.g. 'SB'
+  // Re-display PNR with RF line at the top (real Amadeus shows "RF SB" after RP/ header)
+  if(state.segments && state.segments.length){
+    renderPNR();
+  } else {
+    printLines([`RF ${rf.toUpperCase()}`], 'success');
+  }
+  showToast(`✓ Received From (${rf.toUpperCase()}) saved`);
 }
 
 function generateRandomLocator(){
@@ -1138,35 +1161,114 @@ function generateRandomLocator(){
 }
 
 function handleER(){
+  // Validate: must have at least one segment and passenger
+  if(!state.segments || !state.segments.length){
+    printLines(['NO ITINERARY TO END RECORD'], 'err');
+    return;
+  }
+
+  // Validate CTCM/CTCE for TG and other airlines that require it
+  const primaryAl = state.segments[0] ? state.segments[0].al : null;
+  const requiresCTC = primaryAl && ['TG', 'QR', 'EK', 'SQ', 'TK', 'MH', 'SV'].includes(primaryAl);
+  const hasCTCM = state.specialSSRs && state.specialSSRs.some(s => s.type === 'CTCM');
+  const hasCTCE = state.specialSSRs && state.specialSSRs.some(s => s.type === 'CTCE');
+  if(requiresCTC && (!hasCTCM || !hasCTCE)){
+    const errLines = [];
+    if(!state.ticketing){
+      errLines.push('NEED TICKETING ARRANGEMENT');
+    }
+    errLines.push(`WARNING: MISSING SSR CTCM MOBILE OR SSR CTCE EMAIL OR SSR CTCR NON-CONSENT`);
+    errLines.push(`          FOR ${primaryAl}`);
+    printLines(errLines, 'warn');
+    return; // Do NOT finalize — ER rejected
+  }
+
+  // Validate Ticketing arrangement (TK)
+  if(!state.ticketing){
+    printLines(['NEED TICKETING ARRANGEMENT'], 'warn');
+    return; // Do NOT finalize — ER rejected
+  }
+
+  // At this point ER succeeds — generate locator, build confirmed PNR
   if(!state.locator) state.locator = generateRandomLocator();
+
+  // Format date parts for headers
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dayStr = String(now.getDate()).padStart(2,'0');
+  const monStr = months[now.getMonth()];
+  const yrStr  = String(now.getFullYear()).slice(-2);
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const erDateStamp = `${dayStr}${monStr}${yrStr}/${hh}${mm}Z`;
+  state.dateStamp = erDateStamp;
+
+  // Build agent code: use state one or derive from officeId
+  const currOffice = state.officeId || OFFICE_ID;
+  state.agentCode = state.agentCode || 'SS/GS';
+
+  // Build second RP header line: DACVS33GT/0002SS/7SEP26
+  // 0002 = booking sequence (simulate incrementing), SS = airline code abbrev, date
+  const seqNum = String(Math.floor(Math.random() * 9000) + 1000).padStart(4,'0');
+  const alCode = primaryAl || 'TK';
+  const shortDate = `${now.getDate()}${monStr}${yrStr}`;
+  state.erHeaderLine2 = `${currOffice}/${seqNum}${alCode}/${shortDate}`;
+
+  // Update segments to HK and set confirmed end-code format: E  TG/LOCATOR
   state.segments.forEach(s => {
-    s.status = "HK";
-    s.tktCode = "*1A/E*";
+    s.status = 'HK';
+    s.confirmedEndCode = `E  ${s.al}/${state.locator}`;
   });
+
   state.finalized = true;
   state.hasPending = false;
+  state.justEndedRecord = true; // Flag: on initial ER, don't show OPW/OPC or multi-line airport yet
+
+  // Auto-generate OPW/OPC for TG (Thai Airways ticketing deadlines)
+  if(primaryAl === 'TG' && (!state.opwRemarks || !state.opwRemarks.length)){
+    const opwDate = new Date(now); opwDate.setDate(now.getDate() + 6);
+    const opcDate = new Date(now); opcDate.setDate(now.getDate() + 8);
+    const opwStr = `${opwDate.getDate()}${months[opwDate.getMonth()]}`;
+    const opcStr = `${opcDate.getDate()}${months[opcDate.getMonth()]}`;
+    const segNums = state.segments.map((_,i) => `S${i+2}`).join('/');
+    state.opwRemarks = [
+      `OPW-${opwStr}:2300/1C7/TG REQUIRES TICKET ON OR BEFORE\n        ${opcStr}:2300 DAC TIME ZONE/TKT/${segNums}`
+    ];
+    state.opcRemarks = [
+      `OPC-${opcStr}:2300/1C8/TG CANCELLATION DUE TO NO TICKET DAC TIME\n        ZONE/TKT/${segNums}`
+    ];
+  }
+
   renderPNR();
   updateTopPnrInfo();
-  showToast(`âœ… PNR Confirmed & Saved: ${state.locator}`);
+  showToast(`✅ PNR Confirmed & Saved: ${state.locator}`);
 }
 
 function handleIR(){
-  if(!state.locator) {
-    if(state.passengers.length && state.segments.length){
-      state.locator = "ICRBPO";
+  state.justEndedRecord = false;
+  // If ER was never successfully run (no locator) but PNR is being built:
+  if(!state.locator){
+    if(state.passengers.length || state.segments.length){
+      // PNR is started but not finished — RESTRICTED
+      printLines(['RESTRICTED : PNR NOT FINISHED'], 'err');
+      return;
     } else {
+      // Empty workspace — load lesson PNR
       loadLessonPNR();
       return;
     }
   }
-  const currOffice = state.officeId || "DACVS31XW";
-  // IR shows the stored PNR with AA/SU action code (matches real Amadeus screenshot 3)
-  const agCode = state.agentCode || "MM/GS";
-  const dt = state.dateStamp || "17JUN26/1324Z";
-  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>`);
+  // Has locator — either finalized or a pre-loaded PNR
+  const currOffice = state.officeId || OFFICE_ID;
+  const agCode = state.agentCode || 'SS/GS';
+  const dt = state.dateStamp || '17JUN26/1324Z';
+  const headerLine2 = state.erHeaderLine2 || state.headerLine2 || '';
+  const header = `--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode}   ${dt}   <span class="locator">${state.locator}</span>${headerLine2 ? '\n' + headerLine2 : ''}`;
+  renderPNR(header);
 }
 
 function handleRT(cmd){
+  state.justEndedRecord = false;
   const loc = (cmd||'').replace(/^RT\s*/i, '').trim().toUpperCase();
   if(loc === 'OGJZJ9' || loc === 'TG'){
     loadThaiAirwaysPNR();
@@ -2299,7 +2401,7 @@ function handleXE(cmd){
     if(before > 0){
       state.hasPending = true;
       printLines([`ALL OSI ENTRIES DELETED (${before} removed)`], 'success');
-      showToast('âœ• OSI entries deleted');
+      showToast('✖ OSI entries deleted');
     } else {
       printLines(['NO OSI ENTRIES TO DELETE'], 'warn');
     }
@@ -2327,6 +2429,12 @@ function runCommand(raw){
   if(/^AP\s/i.test(upper)) return handleAP(cmd);
   if(/^TK\s*(TL|OK)/i.test(upper)) return handleTK(upper);
   if(/^FM/i.test(upper)) return handleFM(upper);
+
+  // CTCM / CTCE typed WITHOUT the SR prefix → INVALID FORMAT (real Amadeus rejects these)
+  if(/^CTC[ME]-/i.test(clean)){
+    printLines(['INVALID FORMAT'], 'err');
+    return;
+  }
 
   // RF / Received From and ER / ET End Transaction
   if(/^RF\S*;\s*(ER|ET)$/i.test(upper)) {
