@@ -2419,8 +2419,22 @@ function handleMealCodesFlightInfo(){
   showToast(`Flight Information Meal Codes displayed`);
 }
 
-let commandHistory = [];
-let historyPos = -1;
+// ── Command history: persisted in localStorage across reloads ──
+const CMD_HISTORY_KEY = 'amaduce_cmdHistory';
+const CMD_HISTORY_MAX = 40;
+
+function loadCmdHistory() {
+  try {
+    const raw = localStorage.getItem(CMD_HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+function saveCmdHistory(arr) {
+  try { localStorage.setItem(CMD_HISTORY_KEY, JSON.stringify(arr)); } catch(e) {}
+}
+
+let commandHistory = loadCmdHistory();
+let historyPos = commandHistory.length;
 
 // ---------- XE â€” Delete SSR / DOCS / OSI by line number or SSR type ----------
 // Formats:
@@ -2567,6 +2581,9 @@ function runCommand(raw){
   const cmd = raw.trim();
   if(!cmd) return;
   commandHistory.push(cmd);
+  // Keep only last CMD_HISTORY_MAX entries
+  if (commandHistory.length > CMD_HISTORY_MAX) commandHistory.shift();
+  saveCmdHistory(commandHistory);
   historyPos = commandHistory.length;
   printPromptEcho(cmd);
   const upper = cmd.toUpperCase();
@@ -2948,6 +2965,7 @@ window.closeCommandHistory = function() {
 window.clearCommandHistory = function() {
   commandHistory = [];
   historyPos = -1;
+  saveCmdHistory([]);
   const list = document.getElementById('cmdHistoryList');
   if (list) list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px; list-style:none;">History cleared</li>';
   _selectedHistoryCmd = null;
@@ -2999,6 +3017,9 @@ document.addEventListener('click', (e) => {
 
 // Initialize on page load: start with a fresh, clean terminal (Amadeus Selling Platform Connect behavior)
 window.addEventListener('DOMContentLoaded', ()=>{
+  // Reload persisted command history (survives page refresh)
+  commandHistory = loadCmdHistory();
+  historyPos = commandHistory.length;
   state = createEmptyState();
   term.innerHTML = '';
   updateTopPnrInfo();

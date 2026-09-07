@@ -1,4 +1,4 @@
-# ✈️ AMADEUS GDS প্রফেশনাল ট্রেইনিং লেকচার শীট (PNR & FARE WORKFLOW)
+﻿# ✈️ AMADEUS GDS প্রফেশনাল ট্রেইনিং লেকচার শীট (PNR & FARE WORKFLOW)
 **কোর্স মডিউল:** এয়ার টিকেট বুকিং, পিএনআর ক্রিয়েশন, ফেয়ার শপিং ও টিকেটিং  
 **প্রশিক্ষক ও সহায়িকা:** Amadeus Training System
 
@@ -216,10 +216,55 @@ Amadeus-এ ফেয়ার হিসাব (Price Quote) করার পর �
 | **ফেয়ার ইনফরমেশন শুধু ডিসপ্লে করা** | `FXR` | `WP` | `FQ` |
 | **ফেয়ার হিসাব করে TST তৈরি করা** | `FXP` | `WPNI` / `PQ` | `FQQ` |
 
-### Amadeus Master Pricer Shopping (`FS` কমান্ড):
-বুকিং করার আগেই সরাসরি সবচেয়ে কম ভাড়ার ফ্লাইট খুঁজতে:
-- ওয়ান-ওয়ে: `FSDACBKK20NOV`
-- রাউন্ড ট্রিপ: `FSDACBKK20NOV-28NOV`
+### Amadeus Master Pricer Shopping (FS and FXD Commands):
+
+#### FXD -- Expert Mode (Round-Trip with Dates)
+
+```text
+FXDDAC/D10FEBLHR/D25FEBDAC
+```
+- DAC to LHR and back (Round Trip)
+- /D10FEB: Outbound date | /D25FEB: Return date
+
+#### FS -- Master Pricer (Simple Format)
+
+```text
+FSDACBKK20NOV          (One-Way)
+FSDACBKK20NOV-28NOV    (Round Trip)
+```
+
+### Fare Shop Result -- Booking Commands
+
+| Command | Description |
+| :--- | :--- |
+| FXS1 | Preview Recommendation 1 |
+| FXZ1 | Book Recommendation 1 (no TST) |
+| FXU1 | Book Recommendation 1 + Create TST |
+| FXY1 | View Upsell Options |
+
+### Fare Shop Complete Workflow
+
+```
+FXDDAC/D10FEBLHR/D25FEBDAC   -- Fare Search
+FXU1                          -- Book + Create TST
+NM1SHAKIB/APON MR             -- Passenger Name
+AP WINGS FLY 01757208244      -- Agency Contact
+SRCTCM-01757208244            -- Mobile SSR
+SRCTCE-SHAKIBAPON//GMAIL.COM  -- Email SSR
+TKTL                          -- Ticketing Deadline
+RFSHAKIB                      -- Received By
+ER                            -- Save PNR
+IR                            -- Retrieve PNR
+```
+
+### Reading Fare Shop Output
+
+```
+25 GROUPS AND 50 RECOMMENDATIONS RETURNED FROM BDT 108413 TO 791142
+```
+- 25 GROUPS: 25 different flight combination groups
+- 50 RECOMMENDATIONS: 50 total fare options
+- BDT 108413 TO 791142: Price range from cheapest to most expensive
 
 ---
 
@@ -261,6 +306,12 @@ TST কনফার্ম থাকার পর টিকেট ইস্যু
 | **ইস্যু** | `TTP` | ফাইনাল ইলেকট্রনিক টিকেট ইস্যু |
 | **বাতিল** | `XI` | পুরো পিএনআর ক্যানসেল করা |
 | **রিসেট** | `IG` | কোনো পরিবর্তন সেভ না করে বের হওয়া |
+| **Fare Shop** | `FXDDAC/D10FEBLHR/D25FEBDAC` | FXD: Round-trip fare shopping with dates |
+| **Fare Shop** | `FSDACBKK20NOV-28NOV` | FS: Master Pricer round-trip search |
+| **Rec Preview** | `FXS1` | Recommendation 1 preview |
+| **Book** | `FXZ1` | Book Recommendation 1 (no TST) |
+| **Book+TST** | `FXU1` | Book Recommendation 1 and create TST |
 
 ---
 **লেকচার নোট সমাপ্ত। শুভ প্রশিক্ষণ!** 🎓
+
