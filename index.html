@@ -41,7 +41,7 @@
     <input type="text" id="actionSearchInput" placeholder='Enter an action (example: "Retrieve" or "Launch Smart Flow")'>
   </div>
   <div class="action-bar-pnr-info">
-    <span id="topPnrStatus" class="muted">PNR: J99GZO (Active)</span>
+    <span id="topPnrStatus" class="muted"></span>
     <span>Office ID: <b>DACVS3334</b></span>
   </div>
 </div>
@@ -49,18 +49,33 @@
 <!-- 4. Command Page Header / Tab -->
 <div class="page-header-tabs">
   <div class="page-tab-active" id="cmdPageTab">
-    <span>📄</span>
-    <span id="tabTitleText">Command page - AHMED MD AMIR MR (3) - 25MAR - IST - J99GZO</span>
+    <span style="font-size:14px; opacity:0.85;">📄</span>
+    <span id="tabTitleText">Command page</span>
     <span class="page-tab-close" title="Reset Session" onclick="resetSimulator()">✕</span>
   </div>
   <div class="page-tools">
     <button type="button" class="tab-action-btn" onclick="runSmartCmd('IG')" title="Ignore Current Transaction (IG)">Ignore (IG)</button>
     <button type="button" class="tab-action-btn primary" onclick="runSmartCmd('ET')" title="Save &amp; End Transaction (ET)">Save (ET)</button>
     <span>Owned by <b>DACVS3334</b></span>
-    <span class="tool-icon" id="historyBtn" title="Command History" onclick="openCommandHistory()" style="cursor:pointer;">🕒</span>
-    <span class="tool-icon" title="Split Screen Horizontal">⬒</span>
-    <span class="tool-icon" title="Split Screen Vertical">⬓</span>
-    <span class="tool-icon" title="Quad View">⊞</span>
+    <span class="tool-icon" id="historyBtn" title="Command History" onclick="openCommandHistory()" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;" aria-label="Command History">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+        <path d="M3 3v5h5"/>
+        <path d="M12 7v5l3.5 2"/>
+      </svg>
+    </span>
+    <span class="tool-icon" title="Split Screen Horizontal" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+      </svg>
+    </span>
+    <span class="tool-icon" title="Split Screen Vertical" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <line x1="12" y1="4" x2="12" y2="20"/>
+      </svg>
+    </span>
   </div>
 </div>
 
@@ -431,7 +446,7 @@
 <div class="status-footer">
   <div class="footer-left">
     <span>Main Page</span>
-    <span style="color:#005a9c; font-weight:bold;" id="bottomPaxName">AHMED MD AMIR ...</span>
+    <span style="color:#005a9c; font-weight:bold;" id="bottomPaxName"></span>
   </div>
   <div class="footer-right">
     <span>4505 input</span>
@@ -446,28 +461,30 @@
      COMMAND HISTORY MODAL — matches original Amadeus UI
 ═══════════════════════════════════════════════════════ -->
 <div id="cmdHistoryOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
-  <div style="background:#fff; border-radius:8px; width:540px; max-width:94vw; box-shadow:0 8px 32px rgba(0,0,0,0.35); font-family:'Segoe UI',Arial,sans-serif; overflow:hidden;">
+  <div style="background:#fff; border-radius:6px; width:580px; max-width:94vw; box-shadow:0 8px 32px rgba(0,0,0,0.35); font-family:'Segoe UI',Arial,sans-serif; overflow:hidden;">
 
     <!-- Header -->
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 22px 10px;">
-      <h2 style="margin:0; font-size:18px; font-weight:700; color:#111;">Command History</h2>
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 24px 8px;">
+      <h2 style="margin:0; font-size:19px; font-weight:700; color:#111;">Command History</h2>
       <button onclick="closeCommandHistory()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#555; line-height:1;" title="Close">&times;</button>
     </div>
-    <p style="margin:0 22px 10px; font-size:13px; color:#555;">Select commands in your history</p>
+    <p style="margin:0 24px 12px; font-size:14px; color:#444; text-align:center;">Select commands in your history</p>
 
-    <!-- History List -->
-    <div style="position:relative; margin:0 22px;">
-      <ul id="cmdHistoryList" style="list-style:none; margin:0; padding:4px 0; border:1px solid #ccc; border-radius:4px; max-height:260px; overflow-y:auto; background:#fff;">
+    <!-- History List Box (matching original Amadeus with bullets & clean border) -->
+    <div style="margin:0 24px;">
+      <ul id="cmdHistoryList" style="list-style:none; margin:0; padding:6px 0; border:1px solid #777; border-radius:2px; height:240px; max-height:240px; overflow-y:auto; background:#fff; font-family:'Consolas','Courier New',monospace; font-size:14px;">
       </ul>
-      <button onclick="clearCommandHistory()" style="position:absolute; top:-26px; right:0; background:none; border:none; color:#005a9c; font-size:12px; cursor:pointer; text-decoration:underline;">Clear history</button>
+      <div style="text-align:right; margin-top:8px;">
+        <button onclick="clearCommandHistory()" style="background:none; border:none; color:#005a9c; font-size:13px; cursor:pointer; text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Clear history</button>
+      </div>
     </div>
 
     <!-- Buttons -->
-    <div style="display:flex; gap:10px; justify-content:center; padding:18px 22px 20px;">
-      <button id="histBtnEdit"   onclick="historyAction('edit')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Edit</button>
-      <button id="histBtnFlow"   onclick="historyAction('flow')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Create Smart Flow</button>
-      <button id="histBtnCopy"   onclick="historyAction('copy')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Copy</button>
-      <button id="histBtnSend"   onclick="historyAction('send')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Send</button>
+    <div style="display:flex; gap:10px; justify-content:center; padding:18px 24px 22px;">
+      <button id="histBtnEdit"   onclick="historyAction('edit')"   style="padding:7px 22px; background:#0066cc; color:#fff; border:none; border-radius:4px; font-size:14px; font-weight:600; cursor:pointer;">Edit</button>
+      <button id="histBtnFlow"   onclick="historyAction('flow')"   style="padding:7px 22px; background:#0066cc; color:#fff; border:none; border-radius:4px; font-size:14px; font-weight:600; cursor:pointer;">Create Smart Flow</button>
+      <button id="histBtnCopy"   onclick="historyAction('copy')"   style="padding:7px 22px; background:#0066cc; color:#fff; border:none; border-radius:4px; font-size:14px; font-weight:600; cursor:pointer;">Copy</button>
+      <button id="histBtnSend"   onclick="historyAction('send')"   style="padding:7px 22px; background:#0066cc; color:#fff; border:none; border-radius:4px; font-size:14px; font-weight:600; cursor:pointer;">Send</button>
     </div>
   </div>
 </div>

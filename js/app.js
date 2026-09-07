@@ -83,8 +83,30 @@ const THAI_PNR = {
   hasPending: false
 };
 
-// Current Session State
-let state = JSON.parse(JSON.stringify(LESSON_PNR));
+function createEmptyState() {
+  return {
+    locator: null,
+    officeId: OFFICE_ID,
+    agentCode: null,
+    dateStamp: null,
+    passengers: [],
+    segments: [],
+    phone: null,
+    ticketing: null,
+    commission: null,
+    finalized: false,
+    hasTST: false,
+    tstData: null,
+    specialSSRs: [],
+    osiEntries: [],
+    seats: {},
+    docsEntries: [],
+    hasPending: false
+  };
+}
+
+// Current Session State - Starts completely clean & fresh upon login/refresh!
+let state = createEmptyState();
 let activeSegIdx = 0;
 let activePaxCode = "P1"; // currently assigning for this passenger
 
@@ -446,19 +468,19 @@ function updateTopPnrInfo(){
     return;
   }
 
-  // 2. If no active PNR (reset / ignored state)
-  if(!state.passengers.length && !state.segments.length){
-    tabTitleText.textContent = `Command page - NEW (0) - - NO ACTIVE PNR`;
-    topPnrStatus.textContent = `PNR: None (Inactive)`;
-    bottomPaxName.textContent = `NO ACTIVE PNR`;
+  // 2. If no active PNR (clean initial / reset / ignored state)
+  if(!state.passengers.length && !state.segments.length && !state.locator){
+    if (tabTitleText) tabTitleText.textContent = `Command page`;
+    if (topPnrStatus) topPnrStatus.textContent = ``;
+    if (bottomPaxName) bottomPaxName.textContent = ``;
     return;
   }
 
   // 3. Normal PNR with passengers
   const segInfo = seg0 ? `${seg0.date} - ${seg0.arr}` : "";
-  topPnrStatus.textContent = `PNR: ${loc} (${state.finalized ? 'Confirmed' : 'Building'})`;
-  tabTitleText.textContent = `Command page - ${pax0} (${state.passengers.length}) - ${segInfo} - ${loc}`;
-  bottomPaxName.textContent = pax0.slice(0, 20) + "...";
+  if (topPnrStatus) topPnrStatus.textContent = loc ? `PNR: ${loc} (${state.finalized ? 'Confirmed' : 'Building'})` : `PNR: Building`;
+  if (tabTitleText) tabTitleText.textContent = `Command page - ${pax0} (${state.passengers.length})${segInfo ? ' - ' + segInfo : ''}${loc ? ' - ' + loc : ''}`;
+  if (bottomPaxName) bottomPaxName.textContent = pax0 ? (pax0.slice(0, 20) + "...") : "";
 }
 
 // ---------- SEAT MAP MODULE ----------
@@ -757,49 +779,23 @@ function loadLessonPNR(){
 }
 
 function resetSimulator(){
-  state = {
-    locator: null,
-    passengers: [],
-    segments: [],
-    phone: null,
-    ticketing: null,
-    commission: null,
-    finalized: false,
-    hasTST: false,
-    tstData: null,
-    specialSSRs: [],
-    osiEntries: [],
-    seats: {}
-  };
+  state = createEmptyState();
   lastANRoute = null;
-  term.innerHTML = `<div class="line muted">Simulator reset. Type a command below (e.g. <code>AN12NOVDACBKK</code>, <code>AN12NOVDACNRT</code>, <code>AN25MARDACDXB</code>, or <code>IR</code> for lesson PNR).</div>`;
+  term.innerHTML = '';
   updateTopPnrInfo();
   mountInput();
-  showToast("Simulator reset â€” ready for new command");
+  showToast("Simulator reset — ready for new command");
 }
 
 function handleIG(){
-  state = {
-    locator: null,
-    passengers: [],
-    segments: [],
-    phone: null,
-    ticketing: null,
-    commission: null,
-    finalized: false,
-    hasTST: false,
-    tstData: null,
-    specialSSRs: [],
-    osiEntries: [],
-    seats: {}
-  };
+  state = createEmptyState();
   lastANRoute = null;
   printLines([
     '--- RLR ---',
     'TRANSACTION IGNORED'
   ], 'warn');
   updateTopPnrInfo();
-  showToast("Transaction ignored (IG) â€” Workspace cleared");
+  showToast("Transaction ignored (IG) — Workspace cleared");
 }
 
 // ---------- Command Execution Engine ----------
@@ -2369,18 +2365,19 @@ window.openCommandHistory = function() {
   _selectedHistoryCmd = null;
 
   if (!commandHistory.length) {
-    list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">No commands yet</li>';
+    list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px; list-style:none;">No commands yet</li>';
   } else {
     commandHistory.forEach((cmd, i) => {
       const li = document.createElement('li');
-      li.textContent = cmd;
+      li.textContent = `•  ${cmd}`;
       li.dataset.cmd = cmd;
-      li.style.cssText = 'padding:6px 14px; font-size:14px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-family:monospace;';
+      li.style.cssText = 'padding:3px 12px; font-size:14px; cursor:pointer; font-family:"Consolas","Courier New",monospace; line-height:1.6; white-space:nowrap; list-style:none;';
 
       // Highlight last item (like Amadeus golden highlight)
       if (i === commandHistory.length - 1) {
         li.style.background = '#f5a623';
         li.style.color = '#000';
+        li.style.fontWeight = 'bold';
         _selectedHistoryCmd = cmd;
       }
 
@@ -2389,22 +2386,25 @@ window.openCommandHistory = function() {
         list.querySelectorAll('li').forEach(el => {
           el.style.background = '';
           el.style.color = '';
+          el.style.fontWeight = 'normal';
         });
         // Select clicked
         li.style.background = '#f5a623';
         li.style.color = '#000';
+        li.style.fontWeight = 'bold';
         _selectedHistoryCmd = cmd;
       });
 
       li.addEventListener('mouseover', () => {
-        if (li.style.background !== 'rgb(245, 166, 35)') {
-          li.style.background = '#e8f0fe';
+        if (_selectedHistoryCmd !== cmd) {
+          li.style.background = '#eef3f8';
         }
       });
       li.addEventListener('mouseout', () => {
         if (_selectedHistoryCmd !== cmd) {
           li.style.background = '';
           li.style.color = '';
+          li.style.fontWeight = 'normal';
         }
       });
 
@@ -2427,7 +2427,7 @@ window.clearCommandHistory = function() {
   commandHistory = [];
   historyPos = -1;
   const list = document.getElementById('cmdHistoryList');
-  if (list) list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">History cleared</li>';
+  if (list) list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px; list-style:none;">History cleared</li>';
   _selectedHistoryCmd = null;
   showToast('Command history cleared');
 };
@@ -2475,9 +2475,10 @@ document.addEventListener('click', (e) => {
   if (overlay && e.target === overlay) closeCommandHistory();
 });
 
-// Initialize on page load: display the exact lesson PNR with clickable classes!
+// Initialize on page load: start with a fresh, clean terminal (Amadeus Selling Platform Connect behavior)
 window.addEventListener('DOMContentLoaded', ()=>{
-  printPromptEcho("IR");
-  renderPNR();
+  state = createEmptyState();
+  term.innerHTML = '';
+  updateTopPnrInfo();
   mountInput();
 });
