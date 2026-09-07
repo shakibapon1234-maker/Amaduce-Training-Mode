@@ -1595,31 +1595,71 @@ function handlePricing(cmd){
 
   const hasPax = state.passengers && state.passengers.length > 0;
 
-  // If FXR command OR no passenger names entered yet (matching Screenshot 2 & 3)
-  if(upper.startsWith("FXR") || !hasPax){
+  // FXR = price as booked, FXB = best buy (rebook to N class) — both use segment/fare-basis table
+  // Only FXP (multi-pax table) uses the passenger table format
+  if(upper.startsWith("FXR") || upper.startsWith("FXB") || !hasPax){
     const segs = (state.segments && state.segments.length) ? state.segments : [
       { al:"QR", fn:"639", cls:"N", date:"20MAY", dep:"DAC", arr:"DOH", depT:"0410", arrT:"0620" },
       { al:"QR", fn:"828", cls:"N", date:"20MAY", dep:"DOH", arr:"BKK", depT:"0725", arrT:"1820" }
     ];
 
+    // Build passenger name line for FXB (01  SURNAME/FIRST*)
+    const paxLine = (hasPax && upper.startsWith('FXB'))
+      ? (() => {
+          const p = state.passengers[0];
+          const raw = (p.label || 'PAX/ONE').split(' ')[0]; // "HOSSAIN/KAMALA MS" → "HOSSAIN/KAMALA"
+          const parts = raw.split('/');
+          const surname = parts[0] || 'PAX';
+          const first = (parts[1] || 'ONE').split(' ')[0];
+          return `01  ${surname}/${first}*`;
+        })()
+      : `01 P1`;
+
+    // FXB: "NO REBOOKING REQUIRED..." / FXR: "PRICED AS BOOKED"
+    const statusLine = upper.startsWith('FXB')
+      ? `NO REBOOKING REQUIRED FOR LOWEST AVAILABLE FARE`
+      : (isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`);
+
+    // Ticket deadline — use a date ~30 days from first flight date, or fixed
+    const tkDte = (() => {
+      const seg0 = segs[0];
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      // Try to parse flight date
+      const raw = seg0.date || '20MAY';
+      const mIdx = months.findIndex(m => raw.toUpperCase().includes(m));
+      const day = parseInt(raw) || 20;
+      const yr = new Date().getFullYear();
+      // deadline = flight date - 1 day
+      const deadlineDay = day > 1 ? day - 1 : day;
+      const mName = mIdx >= 0 ? months[mIdx] : 'MAY';
+      const yrShort = String(yr).slice(-2);
+      return `${deadlineDay}${mName}${yrShort}`;
+    })();
+
     const rows = [
       upper,
       ``,
-      `01 P1`,
-      isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
-      `LAST TKT DTE 19MAY26/23:59 LT in POS - SEE ADV PURCHASE`,
-      `------------------------------------------------------------`,
-      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`
+      paxLine,
+      statusLine,
+      `LAST TKT DTE ${tkDte}/23:59 LT in POS - SEE ADV PURCHASE`,
+      `----------------------------------------------------------------`,
+      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA      BG`
     ];
 
     segs.forEach((s, idx) => {
       if(idx === 0) {
         rows.push(` ${s.dep}`);
       }
-      const prefix = (idx > 0) ? `X${s.dep}`.padEnd(5, ' ') : '     ';
-      const bkCol = isRebook ? `${s.cls} *${s.cls}` : `${s.cls}  ${s.cls}`;
+      // Prefix: first segment is origin city, connecting segments are "XDOH" style
+      const prefix = (idx === 0) ? `   ${s.dep}`.padEnd(5,' ') : `X${s.dep}`.padEnd(5, ' ');
+      // BK T columns: For FXB "N N" (rebooked), for FXR "N  N" (as booked)
+      const bkCol = upper.startsWith('FXB') ? `${s.cls} ${s.cls}` : `${s.cls}  ${s.cls}`;
+      // Fare basis: e.g. NJR4R1RI (N=class, JR4R1RI=fare type code)
       const fBasis = `${s.cls}JR4R1RI`.padEnd(16, ' ');
-      rows.push(`${prefix} ${s.al.padEnd(3, ' ')}  ${s.fn.padStart(4, ' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis} ${s.date}       25`);
+      // Baggage: 20kg for connecting short-haul, 25kg for main long-haul, 15 for intra-region
+      const bgKg = (idx === 0 && segs.length > 1) ? '15' : '25';
+      // NVB empty, NVA = flight date
+      rows.push(`${prefix} ${s.al.padEnd(3,' ')}  ${s.fn.padStart(4,' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis}       ${s.date}    ${bgKg}`);
       if(idx === segs.length - 1){
         rows.push(` ${s.arr}`);
       }
