@@ -862,6 +862,7 @@ function loadLessonPNR(){
 function resetSimulator(){
   state = createEmptyState();
   lastANRoute = null;
+  if(typeof resetFareShop === 'function') resetFareShop();
   term.innerHTML = '';
   updateTopPnrInfo();
   mountInput();
@@ -871,6 +872,7 @@ function resetSimulator(){
 function handleIG(){
   state = createEmptyState();
   lastANRoute = null;
+  if(typeof resetFareShop === 'function') resetFareShop();
   printLines([
     '--- RLR ---',
     'TRANSACTION IGNORED'
@@ -2532,6 +2534,11 @@ function runCommand(raw){
   // DM / DM1 — Display Minimum Connecting Time / Transit Time (Screenshot 1)
   if(/^DM\d*/i.test(clean)) return handleDM(upper);
 
+  // FXD / FS — Fare Shop / Master Pricer (original Amadeus fare shopping)
+  if(/^FXD/i.test(clean)) return handleFXD(upper, clean);
+  if(/^FS[A-Z]{6}/i.test(clean)) return handleFS(upper, clean);
+  if(/^FX[SZUY]\d+$/i.test(clean)) return handleFXAction(upper, clean);
+
   // FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3)
   if(/^FX[RBPX]/i.test(clean)) return handlePricing(upper);
 
@@ -2556,7 +2563,7 @@ function runCommand(raw){
   // XE — Delete SSR / DOCS / OSI entry (XE10 or XEMOML or XESRDOCS/P1)
   if(/^XE/i.test(upper)) return handleXE(upper);
 
-  printLines([`FORMAT - command not recognised. Try: DM1 · FXR · FXB · RT · HE/MEAL · MS22 · SRMOML/P2 · ER · TQT · FPINV · TTP · NU1NAME/FIRST · XE10`], 'err');
+  printLines([`FORMAT - command not recognised. Try: FXDDAC/D10FEBLHR/D25FEBDAC · FSDACBKK20NOV · FXS1 · FXZ1 · FXR · FXB · RT · HE/MEAL · ER · TQT · TTP`], 'err');
 }
 
 function mountInput(){
