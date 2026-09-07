@@ -1573,15 +1573,17 @@ function handleDM(cmd){
   showToast(`✓ Actual connecting time at ${transit}: ${hours}h ${mins}m (${connTimeStr})`);
 }
 
-// ---------- FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3) ----------
+// ---------- FXR / FXB / FXP / FXX — Pricing & TST Creation (Matches YouTube tutorial & original Amadeus) ----------
 function handlePricing(cmd){
   const upper = (cmd || 'FXR').toUpperCase().trim();
-  const isRebook = (/^FX[RB]/i.test(upper)); // FXR and FXB rebook to lowest class
+  const isRebook = (/^FX[RB]/i.test(upper));
 
-  // Rebook segment classes to 'N' (lowest economy promotional class)
+  // If rebook requested, keep current class if already lowest (e.g. W, N) or set to W for TG / N for QR
   if(isRebook && state.segments && state.segments.length){
     state.segments.forEach(s => {
-      s.cls = 'N';
+      if(!s.cls || s.cls === 'Y') {
+        s.cls = (s.al === 'TG') ? 'W' : 'N';
+      }
       s.rebooked = true;
     });
   }
@@ -1590,163 +1592,186 @@ function handlePricing(cmd){
   state.hasPending = true;
 
   const hasPax = state.passengers && state.passengers.length > 0;
-
-  // FXR = price as booked, FXB = best buy (rebook to N class) — both use segment/fare-basis table
-  // Only FXP (multi-pax table) uses the passenger table format
-  if(upper.startsWith("FXR") || upper.startsWith("FXB") || !hasPax){
-    const segs = (state.segments && state.segments.length) ? state.segments : [
-      { al:"QR", fn:"639", cls:"N", date:"20MAY", dep:"DAC", arr:"DOH", depT:"0410", arrT:"0620" },
-      { al:"QR", fn:"828", cls:"N", date:"20MAY", dep:"DOH", arr:"BKK", depT:"0725", arrT:"1820" }
-    ];
-
-    // Build passenger name line for FXB (01  SURNAME/FIRST*)
-    const paxLine = (hasPax && upper.startsWith('FXB'))
-      ? (() => {
-          const p = state.passengers[0];
-          const raw = (p.label || 'PAX/ONE').split(' ')[0]; // "HOSSAIN/KAMALA MS" → "HOSSAIN/KAMALA"
-          const parts = raw.split('/');
-          const surname = parts[0] || 'PAX';
-          const first = (parts[1] || 'ONE').split(' ')[0];
-          return `01  ${surname}/${first}*`;
-        })()
-      : `01 P1`;
-
-    // FXB: "NO REBOOKING REQUIRED..." / FXR: "PRICED AS BOOKED"
-    const statusLine = upper.startsWith('FXB')
-      ? `NO REBOOKING REQUIRED FOR LOWEST AVAILABLE FARE`
-      : (isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`);
-
-    // Ticket deadline — use a date ~30 days from first flight date, or fixed
-    const tkDte = (() => {
-      const seg0 = segs[0];
-      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      // Try to parse flight date
-      const raw = seg0.date || '20MAY';
-      const mIdx = months.findIndex(m => raw.toUpperCase().includes(m));
-      const day = parseInt(raw) || 20;
-      const yr = new Date().getFullYear();
-      // deadline = flight date - 1 day
-      const deadlineDay = day > 1 ? day - 1 : day;
-      const mName = mIdx >= 0 ? months[mIdx] : 'MAY';
-      const yrShort = String(yr).slice(-2);
-      return `${deadlineDay}${mName}${yrShort}`;
-    })();
-
+  // Multi-passenger table for FXP when multiple passengers are in PNR
+  if(upper.startsWith("FXP") && hasPax && state.passengers.length > 1){
     const rows = [
-      upper,
-      ``,
-      paxLine,
-      statusLine,
-      `LAST TKT DTE ${tkDte}/23:59 LT in POS - SEE ADV PURCHASE`,
-      `----------------------------------------------------------------`,
-      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA      BG`
+      isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
+      `  PASSENGER       PTC   NP  FARE<BDT> TAX/FEE   PER PSGR`
     ];
 
-    segs.forEach((s, idx) => {
-      if(idx === 0) {
-        rows.push(` ${s.dep}`);
-      }
-      // Prefix: first segment is origin city, connecting segments are "XDOH" style
-      const prefix = (idx === 0) ? `   ${s.dep}`.padEnd(5,' ') : `X${s.dep}`.padEnd(5, ' ');
-      // BK T columns: For FXB "N N" (rebooked), for FXR "N  N" (as booked)
-      const bkCol = upper.startsWith('FXB') ? `${s.cls} ${s.cls}` : `${s.cls}  ${s.cls}`;
-      // Fare basis: e.g. NJR4R1RI (N=class, JR4R1RI=fare type code)
-      const fBasis = `${s.cls}JR4R1RI`.padEnd(16, ' ');
-      // Baggage: 20kg for connecting short-haul, 25kg for main long-haul, 15 for intra-region
-      const bgKg = (idx === 0 && segs.length > 1) ? '15' : '25';
-      // NVB empty, NVA = flight date
-      rows.push(`${prefix} ${s.al.padEnd(3,' ')}  ${s.fn.padStart(4,' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis}       ${s.date}    ${bgKg}`);
-      if(idx === segs.length - 1){
-        rows.push(` ${s.arr}`);
+    let totalNP = 0;
+    let totalFare = 0;
+    let totalTax = 0;
+    let grandTotal = 0;
+    state.tstRecords = [];
+
+    let lineNo = 1;
+    state.passengers.forEach((p, i)=>{
+      if(p.type === 'child'){
+        const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
+        const shortName = rawName.slice(0, 14).padEnd(14, ' ');
+        rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  CH     1     13529     6084      19613`);
+        totalNP += 1; totalFare += 13529; totalTax += 6084; grandTotal += 19613;
+        state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 6084, total: 19613, ptc: 'CH', segs: '1-2' });
+        lineNo++;
+      } else if(p.type === 'adult' || !p.type){
+        const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
+        const shortName = rawName.slice(0, 14).padEnd(14, ' ');
+        rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
+        totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
+        state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
+        lineNo++;
+      } else if(p.type === 'infantCarrier'){
+        const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
+        const shortName = rawName.slice(0, 14).padEnd(14, ' ');
+        rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
+        totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
+        state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
+        lineNo++;
+
+        const infSurname = p.infant ? p.infant.surname : 'AHMED';
+        const infFirst = p.infant ? p.infant.first : 'TAHER';
+        const infName = `${infSurname}/${infFirst}*`;
+        const shortInf = infName.slice(0, 14).padEnd(14, ' ');
+        rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortInf}  IN     1      6640      252       6892`);
+        totalNP += 1; totalFare += 6640; totalTax += 252; grandTotal += 6892;
+        state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1} I`, name: `${infSurname}/${infFirst} MISS(INF)`, fare: 6640, tax: 252, total: 6892, ptc: 'IN', segs: '1-2' });
+        lineNo++;
       }
     });
 
-    const origCity = segs[0].dep;
-    const destCity = segs[segs.length - 1].arr;
-    const alCode = segs[0].al;
-    const dateStr = segs[0].date;
-    const viaCode = segs.length > 1 ? ` X/${segs[0].arr}` : '';
-
     rows.push(``);
-    rows.push(` USD  1068.00       ${dateStr}26${origCity} ${alCode}${viaCode} ${alCode} ${destCity}1068.00NUC`);
-    rows.push(` BDT   131055       1068.00END ROE1.00`);
-    rows.push(` BDT      500-BD    XT BDT 2500-OW BDT 1228-P7 BDT 1228-P8 BDT`);
-    rows.push(` BDT      444-E5    4000-UT BDT 2022-G4 BDT 184-PZ BDT 2022-QA`);
-    rows.push(` BDT    13754-XT    BDT 337-R9 BDT 136-E7 BDT 97-G8`);
-    rows.push(` BDT   145753`);
-    rows.push(` RATE USED 1USD=122.71BDT`);
-    rows.push(` FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
-    rows.push(` FARE FAMILY:FC1:1-2:ECLASSIC`);
-    rows.push(` FXU/TS TO UPSELL ECONVENIEN FOR 6626BDT`);
-    rows.push(`>                                                    PAGE  2/ 3`);
-
-    state.tstRecords = [
-      { tstNum: 1, pCode: '.1', name: 'PAX 1', fare: 131055, tax: 14698, total: 145753, ptc: 'ADT', segs: `1-${segs.length}` }
-    ];
+    rows.push(`           TOTALS        ${totalNP}     ${totalFare}    ${totalTax}      ${grandTotal}`);
+    rows.push(``);
+    rows.push(`1-2 LAST TKT DTE 24JUL18 - SEE SALES RSTNS`);
+    rows.push(`3 LAST TKT DTE 05OCT18/23:59 LT in POS - SEE ADV PURCHASE`);
+    rows.push(`1-3 FARE VALID FOR E TICKET ONLY`);
+    rows.push(`1-2 TICKETS ARE NON-REFUNDABLE`);
+    rows.push(`                                    PAGE   2/ 2`);
 
     printLines(rows, '');
-    showToast(`✓ Best Buy Quoted (${upper}) — Rebooked to class ${segs[0].cls} — Type RT to view`);
+    showToast(`✓ Quoted (${upper}) — TST Stored for ${totalNP} passenger(s) — Type TQT to view`);
     return;
   }
 
-  // Multi-passenger PNR table (e.g. Thai Airways / Turkish Airlines with existing names)
-  const rows = [
-    isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
-    `  PASSENGER       PTC   NP  FARE<BDT> TAX/FEE   PER PSGR`
+  // Standard Segment / Fare Basis table for FXR / FXB / single-passenger
+  const segs = (state.segments && state.segments.length) ? state.segments : [
+    { al:"TG", fn:"322", cls:"W", date:"25SEP", dep:"DAC", arr:"BKK", depT:"1335", arrT:"1715" },
+    { al:"TG", fn:"321", cls:"W", date:"07OCT", dep:"BKK", arr:"DAC", depT:"1035", arrT:"1210" }
   ];
 
-  let totalNP = 0;
-  let totalFare = 0;
-  let totalTax = 0;
-  let grandTotal = 0;
-  state.tstRecords = [];
+  // Build passenger name line for FXB / FXR (01 P1 or 01 SURNAME/FIRST*)
+  const paxLine = (hasPax && upper.startsWith('FXB'))
+    ? (() => {
+        const p = state.passengers[0];
+        const raw = (p.label || 'PAX/ONE').split(' ')[0];
+        const parts = raw.split('/');
+        const surname = parts[0] || 'PAX';
+        const first = (parts[1] || 'ONE').split(' ')[0];
+        return `01  ${surname}/${first}*`;
+      })()
+    : `01 P1`;
 
-  let lineNo = 1;
-  state.passengers.forEach((p, i)=>{
-    if(p.type === 'child'){
-      const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
-      const shortName = rawName.slice(0, 14).padEnd(14, ' ');
-      rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  CH     1     13529     6084      19613`);
-      totalNP += 1; totalFare += 13529; totalTax += 6084; grandTotal += 19613;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 6084, total: 19613, ptc: 'CH', segs: '1-2' });
-      lineNo++;
-    } else if(p.type === 'adult' || !p.type){
-      const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
-      const shortName = rawName.slice(0, 14).padEnd(14, ' ');
-      rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
-      totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
-      lineNo++;
-    } else if(p.type === 'infantCarrier'){
-      const rawName = p.label.split('/')[0] + '/' + (p.label.split('/')[1]||'').split(' ')[0] + '*';
-      const shortName = rawName.slice(0, 14).padEnd(14, ' ');
-      rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortName}  ADT    1     13529     7584      21113`);
-      totalNP += 1; totalFare += 13529; totalTax += 7584; grandTotal += 21113;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1}`, name: p.label.split('(')[0], fare: 13529, tax: 7584, total: 21113, ptc: 'ADT', segs: '1-2' });
-      lineNo++;
+  // Status line: matches real Amadeus screenshot
+  const statusLine = `NO REBOOKING REQUIRED FOR LOWEST AVAILABLE FARE`;
 
-      const infSurname = p.infant ? p.infant.surname : 'AHMED';
-      const infFirst = p.infant ? p.infant.first : 'TAHER';
-      const infName = `${infSurname}/${infFirst}*`;
-      const shortInf = infName.slice(0, 14).padEnd(14, ' ');
-      rows.push(`<span class="tst-tag">0${lineNo}</span> ${shortInf}  IN     1      6640      252       6892`);
-      totalNP += 1; totalFare += 6640; totalTax += 252; grandTotal += 6892;
-      state.tstRecords.push({ tstNum: lineNo, pCode: `.${i+1} I`, name: `${infSurname}/${infFirst} MISS(INF)`, fare: 6640, tax: 252, total: 6892, ptc: 'IN', segs: '1-2' });
-      lineNo++;
-    }
+  // Ticket deadline
+  const tkDte = (() => {
+    const seg0 = segs[0];
+    const raw = seg0.date || '25SEP';
+    const m = raw.match(/(\d+)([A-Z]{3})/i);
+    const day = m ? m[1] : '31';
+    const mon = m ? m[2].toUpperCase() : 'MAR';
+    return `${day}${mon}26`;
+  })();
+
+  const rows = [
+    upper,
+    ``,
+    paxLine,
+    statusLine,
+    `LAST TKT DTE ${tkDte} - SEE SALES RSTNS`,
+    `------------------------------------------------------------`,
+    `       AL FLGT   BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`
+  ];
+
+  // Origin city of whole journey
+  rows.push(` ${segs[0].dep}`);
+
+  // Segment rows
+  segs.forEach((s, idx) => {
+    // City code: destination of this segment (e.g. ' BKK', ' DAC')
+    // If it's a connecting transit segment in multi-leg flight (not roundtrip turnaround):
+    const isTransit = (idx < segs.length - 1 && s.arr !== segs[0].dep && segs[idx+1] && segs[idx+1].arr !== segs[0].dep);
+    const city = (isTransit ? `X${s.arr}` : ` ${s.arr}`).padEnd(4, ' ');
+
+    const al = s.al.padEnd(2, ' ');
+    const fn = s.fn.padStart(5, ' ');
+    const bk = (s.cls || 'W').padStart(2, ' ');
+    const t = (s.cls || 'W').padStart(2, ' ');
+    const date = (s.date || '25SEP').padStart(5, ' ');
+    const time = (s.depT || '1335').padStart(4, ' ');
+
+    // Fare basis
+    const fBasis = (s.al === 'TG' ? `${s.cls || 'W'}LASV` : `${s.cls || 'N'}JR4R1RI`).padEnd(16, ' ');
+
+    // NVB and NVA: flight date repeated (e.g. 25SEP25SEP or 12DEC12DEC)
+    const nvbNva = `${s.date || '25SEP'}${s.date || '25SEP'}`.padEnd(10, ' ');
+
+    // Baggage: 1P
+    const bg = '  1P';
+
+    rows.push(`${city} ${al} ${fn} ${bk} ${t} ${date} ${time}     ${fBasis} ${nvbNva}${bg}`);
   });
 
   rows.push(``);
-  rows.push(`           TOTALS        ${totalNP}     ${totalFare}    ${totalTax}      ${grandTotal}`);
-  rows.push(``);
-  rows.push(`1-2 LAST TKT DTE 24JUL18 - SEE SALES RSTNS`);
-  rows.push(`3 LAST TKT DTE 05OCT18/23:59 LT in POS - SEE ADV PURCHASE`);
-  rows.push(`1-3 FARE VALID FOR E TICKET ONLY`);
-  rows.push(`1-2 TICKETS ARE NON-REFUNDABLE`);
-  rows.push(`                                    PAGE   2/ 2`);
+
+  const origCity = segs[0].dep;
+  const destCity = segs[segs.length - 1].arr;
+  const date0 = segs[0].date || '25SEP';
+  const isTG = (segs[0].al === 'TG');
+
+  if (isTG) {
+    // Exact Thai Airways calculation from YouTube tutorial
+    rows.push(`USD    256.00     ${date0}26DAC TG BKK128.00TG DAC128.00NUC`);
+    rows.push(`BDT     31414     256.00END ROE1.00`);
+    rows.push(`BDT    500-BD     XT BDT 444-E5 BDT 2500-OW BDT 1228-P7 BDT`);
+    rows.push(`BDT   1228-YR     1228-P8 BDT 4000-UT BDT 136-E7 BDT 136-E7`);
+    rows.push(`BDT  14201-XT     BDT 97-G8 BDT 97-G8 BDT 4335-TS`);
+    rows.push(`BDT     47343`);
+    rows.push(`RATE USED 1USD=122.71BDT`);
+    rows.push(`FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
+    rows.push(`FARE FAMILY:FC1:1:ECOSV1`);
+    rows.push(`FARE FAMILY:FC2:2:ECOSV1`);
+    rows.push(`>                                                   PAGE  2/ 3`);
+
+    state.tstRecords = [
+      { tstNum: 1, pCode: '.1', name: (hasPax ? state.passengers[0].label : 'PAX 1'), fare: 31414, tax: 15929, total: 47343, ptc: 'ADT', segs: `1-${segs.length}` }
+    ];
+  } else {
+    // General international calculation (e.g. QR / TK)
+    const alCode = segs[0].al;
+    const viaCode = segs.length > 2 ? ` X/${segs[0].arr}` : '';
+    rows.push(`USD   1068.00     ${date0}26${origCity} ${alCode}${viaCode} ${alCode} ${destCity}1068.00NUC`);
+    rows.push(`BDT    131055     1068.00END ROE1.00`);
+    rows.push(`BDT     500-BD    XT BDT 2500-OW BDT 1228-P7 BDT 1228-P8 BDT`);
+    rows.push(`BDT     444-E5    4000-UT BDT 2022-G4 BDT 184-PZ BDT 2022-QA`);
+    rows.push(`BDT   13754-XT    BDT 337-R9 BDT 136-E7 BDT 97-G8`);
+    rows.push(`BDT    145753`);
+    rows.push(`RATE USED 1USD=122.71BDT`);
+    rows.push(`FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
+    rows.push(`FARE FAMILY:FC1:1-2:ECLASSIC`);
+    rows.push(`FXU/TS TO UPSELL ECONVENIEN FOR 6626BDT`);
+    rows.push(`>                                                   PAGE  2/ 3`);
+
+    state.tstRecords = [
+      { tstNum: 1, pCode: '.1', name: (hasPax ? state.passengers[0].label : 'PAX 1'), fare: 131055, tax: 14698, total: 145753, ptc: 'ADT', segs: `1-${segs.length}` }
+    ];
+  }
 
   printLines(rows, '');
-  showToast(`✅ Best Buy Quoted (${upper}) — TST Stored for ${totalNP} passenger(s) — Type TQT to view`);
+  showToast(`✓ Quoted (${upper}) — Lowest available fare`);
+  return;
 }
 
 // ---------- TQT â€” Ticket Quote Table / Display TST (Screenshot 3) ----------
@@ -1820,25 +1845,28 @@ function handleTQDetail(){
 
   // Segment lines
   // Format: " 1  DAC QR  639 N 20MAY 0410  OK NJR4R1RI          20MAY    25K"
-  // Connecting:" 2 X DOH QR  828 N 20MAY 0725  OK NJR4R1RI          20MAY    25K"
+  const isTG = (segs.length && segs[0].al === 'TG');
+  const tst = (state.tstRecords && state.tstRecords[0]) ? state.tstRecords[0] : null;
+  const fareBDT = tst ? tst.fare : (isTG ? 31414 : 131055);
+  const fareUSD = isTG ? 256.00 : 1068.00;
+  const taxTotal = tst ? tst.tax : (isTG ? 15929 : 14698);
+  const grandTotal = tst ? tst.total : (fareBDT + taxTotal);
+  const bsr = 122.71;
+
   segs.forEach((s, idx) => {
-    const connX = idx > 0 ? 'X' : ' ';
+    const isTransit = (idx < segs.length - 1 && s.arr !== segs[0].dep && segs[idx+1] && segs[idx+1].arr !== segs[0].dep);
+    const connX = isTransit ? 'X' : ' ';
     const dep   = s.dep.padEnd(3,' ');
     const alPad = s.al.padEnd(2,' ');
     const fn    = s.fn.padStart(4,' ');
-    const cls   = s.cls || 'N';
-    const fBasis= `${cls}JR4R1RI`.padEnd(16,' ');
-    const nva   = s.date || '20MAY';
-    const bg    = (idx === 0 && segs.length > 1) ? '25K' : '25K';
-    rows.push(` ${idx+1} ${connX} ${dep} ${alPad} ${fn} ${cls} ${s.date||'20MAY'} ${s.depT||'0410'}  OK ${fBasis} ${nva}    ${bg}`);
+    const cls   = s.cls || (s.al === 'TG' ? 'W' : 'N');
+    const fBasis= (s.al === 'TG' ? `${cls}LASV` : `${cls}JR4R1RI`).padEnd(16,' ');
+    const nva   = s.date || '25SEP';
+    const bg    = ' 1P';
+    rows.push(` ${idx+1} ${connX} ${dep} ${alPad} ${fn} ${cls} ${s.date||'25SEP'} ${s.depT||'1335'}  OK ${fBasis} ${nva}    ${bg}`);
   });
 
   // Fare block
-  const fareUSD  = 1068.00;
-  const fareBDT  = 131055;
-  const taxTotal = 14698;
-  const grandTotal = fareBDT + taxTotal;
-  const bsr = 122.71;
 
   rows.push(``);
   rows.push(`FARE F USD   ${fareUSD.toFixed(2)}`);
