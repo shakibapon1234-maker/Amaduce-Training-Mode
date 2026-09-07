@@ -57,7 +57,7 @@
     <button type="button" class="tab-action-btn" onclick="runSmartCmd('IG')" title="Ignore Current Transaction (IG)">Ignore (IG)</button>
     <button type="button" class="tab-action-btn primary" onclick="runSmartCmd('ET')" title="Save &amp; End Transaction (ET)">Save (ET)</button>
     <span>Owned by <b>DACVS3334</b></span>
-    <span class="tool-icon" title="Command History">🕒</span>
+    <span class="tool-icon" id="historyBtn" title="Command History" onclick="openCommandHistory()" style="cursor:pointer;">🕒</span>
     <span class="tool-icon" title="Split Screen Horizontal">⬒</span>
     <span class="tool-icon" title="Split Screen Vertical">⬓</span>
     <span class="tool-icon" title="Quad View">⊞</span>
@@ -439,6 +439,36 @@
     <span>Column: 1</span>
     <span class="help-avatar-badge">Hi, can I help you? ▲</span>
     <span>Office ID: <b>DACVS3334</b></span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     COMMAND HISTORY MODAL — matches original Amadeus UI
+═══════════════════════════════════════════════════════ -->
+<div id="cmdHistoryOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:8px; width:540px; max-width:94vw; box-shadow:0 8px 32px rgba(0,0,0,0.35); font-family:'Segoe UI',Arial,sans-serif; overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:18px 22px 10px;">
+      <h2 style="margin:0; font-size:18px; font-weight:700; color:#111;">Command History</h2>
+      <button onclick="closeCommandHistory()" style="background:none; border:none; font-size:22px; cursor:pointer; color:#555; line-height:1;" title="Close">&times;</button>
+    </div>
+    <p style="margin:0 22px 10px; font-size:13px; color:#555;">Select commands in your history</p>
+
+    <!-- History List -->
+    <div style="position:relative; margin:0 22px;">
+      <ul id="cmdHistoryList" style="list-style:none; margin:0; padding:4px 0; border:1px solid #ccc; border-radius:4px; max-height:260px; overflow-y:auto; background:#fff;">
+      </ul>
+      <button onclick="clearCommandHistory()" style="position:absolute; top:-26px; right:0; background:none; border:none; color:#005a9c; font-size:12px; cursor:pointer; text-decoration:underline;">Clear history</button>
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex; gap:10px; justify-content:center; padding:18px 22px 20px;">
+      <button id="histBtnEdit"   onclick="historyAction('edit')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Edit</button>
+      <button id="histBtnFlow"   onclick="historyAction('flow')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Create Smart Flow</button>
+      <button id="histBtnCopy"   onclick="historyAction('copy')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Copy</button>
+      <button id="histBtnSend"   onclick="historyAction('send')"   style="padding:8px 22px; background:#005a9c; color:#fff; border:none; border-radius:4px; font-size:14px; cursor:pointer;">Send</button>
+    </div>
   </div>
 </div>
 

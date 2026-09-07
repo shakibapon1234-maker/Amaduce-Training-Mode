@@ -2354,6 +2354,127 @@ document.getElementById('actionSearchInput').addEventListener('keydown', (e)=>{
   }
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMAND HISTORY MODAL — matches original Amadeus "Command History" dialog
+// ─────────────────────────────────────────────────────────────────────────────
+let _selectedHistoryCmd = null;
+
+window.openCommandHistory = function() {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  const list    = document.getElementById('cmdHistoryList');
+  if (!overlay || !list) return;
+
+  // Rebuild list (newest at bottom like Amadeus)
+  list.innerHTML = '';
+  _selectedHistoryCmd = null;
+
+  if (!commandHistory.length) {
+    list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">No commands yet</li>';
+  } else {
+    commandHistory.forEach((cmd, i) => {
+      const li = document.createElement('li');
+      li.textContent = cmd;
+      li.dataset.cmd = cmd;
+      li.style.cssText = 'padding:6px 14px; font-size:14px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-family:monospace;';
+
+      // Highlight last item (like Amadeus golden highlight)
+      if (i === commandHistory.length - 1) {
+        li.style.background = '#f5a623';
+        li.style.color = '#000';
+        _selectedHistoryCmd = cmd;
+      }
+
+      li.addEventListener('click', () => {
+        // Deselect all
+        list.querySelectorAll('li').forEach(el => {
+          el.style.background = '';
+          el.style.color = '';
+        });
+        // Select clicked
+        li.style.background = '#f5a623';
+        li.style.color = '#000';
+        _selectedHistoryCmd = cmd;
+      });
+
+      li.addEventListener('mouseover', () => {
+        if (li.style.background !== 'rgb(245, 166, 35)') {
+          li.style.background = '#e8f0fe';
+        }
+      });
+      li.addEventListener('mouseout', () => {
+        if (_selectedHistoryCmd !== cmd) {
+          li.style.background = '';
+          li.style.color = '';
+        }
+      });
+
+      list.appendChild(li);
+    });
+    // Scroll to bottom (latest command)
+    list.scrollTop = list.scrollHeight;
+  }
+
+  overlay.style.display = 'flex';
+};
+
+window.closeCommandHistory = function() {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  if (overlay) overlay.style.display = 'none';
+  _selectedHistoryCmd = null;
+};
+
+window.clearCommandHistory = function() {
+  commandHistory = [];
+  historyPos = -1;
+  const list = document.getElementById('cmdHistoryList');
+  if (list) list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">History cleared</li>';
+  _selectedHistoryCmd = null;
+  showToast('Command history cleared');
+};
+
+window.historyAction = function(action) {
+  const cmd = _selectedHistoryCmd;
+  if (!cmd && action !== 'flow') {
+    showToast('Please select a command first', 'warn');
+    return;
+  }
+
+  if (action === 'send') {
+    // Execute the command
+    closeCommandHistory();
+    setTimeout(() => runCommand(cmd), 100);
+
+  } else if (action === 'copy') {
+    // Copy to clipboard
+    navigator.clipboard.writeText(cmd).then(() => {
+      showToast(`Copied: ${cmd}`);
+    }).catch(() => {
+      // Fallback
+      const inp = document.getElementById('cmdInput');
+      if (inp) { inp.value = cmd; inp.focus(); inp.select(); }
+      showToast(`Copied to input: ${cmd}`);
+    });
+    closeCommandHistory();
+
+  } else if (action === 'edit') {
+    // Put in input for editing
+    closeCommandHistory();
+    setTimeout(() => {
+      const inp = document.getElementById('cmdInput');
+      if (inp) { inp.value = cmd; inp.focus(); inp.setSelectionRange(cmd.length, cmd.length); }
+    }, 100);
+
+  } else if (action === 'flow') {
+    showToast('Smart Flow creation — coming soon');
+  }
+};
+
+// Close modal when clicking outside (backdrop click)
+document.addEventListener('click', (e) => {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  if (overlay && e.target === overlay) closeCommandHistory();
+});
+
 // Initialize on page load: display the exact lesson PNR with clickable classes!
 window.addEventListener('DOMContentLoaded', ()=>{
   printPromptEcho("IR");

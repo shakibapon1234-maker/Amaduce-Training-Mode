@@ -226,10 +226,10 @@ function renderPNR(header){
     const currOffice = state.officeId || OFFICE_ID;
     rows.push(`RP/${currOffice}/`);
   } else {
-    const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR MSC ---`;
+    const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR ---`;
     rows.push(rlrHeader);
     const currOffice = state.officeId || OFFICE_ID;
-    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'BS/GS');
+    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'MM/GS');
     rows.push(`RP/${currOffice}/${currOffice}          ${agCode}   ${state.dateStamp||"13NOV24/1435Z"}   <span class="locator">${state.locator||"J99GZO"}</span>`);
     if(state.headerLine2){
       rows.push(state.headerLine2);
@@ -267,16 +267,19 @@ function renderPNR(header){
       const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum);
       segLines.forEach(l => rows.push(l));
     } else {
-      const segTkt = seg.tktCode || "TK/VB7BHH";
       const day = seg.day || "2*";
       const dateStr = seg.date || "25MAR";
-      const arrDateStr = seg.arrDate || dateStr;
+      // Real Amadeus shows "*1A/E*" for confirmed HK segments after ER/IR
+      // Format: " 2  QR 639 N 20MAY 3 DACDOH HK1    1  0410 0620   *1A/E*"
+      const isHK = (seg.status === 'HK');
+      const countStr = isHK ? seg.count.toString().padStart(4, ' ') : `  ${seg.count}`;
+      const endCode = isHK ? `  *1A/E*` : `  ${seg.tktCode || 'TK/VB7BHH'}`;
 
       rows.push(
         `${segLineNum.toString().padStart(2, ' ')}  ` +
         `<span class="al">${seg.al} ${seg.fn}</span> ` +
         `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
-        `${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${arrDateStr}  E  ${segTkt}`
+        `${seg.status}${countStr}  ${seg.depT} ${seg.arrT}${endCode}`
       );
     }
   });
@@ -1117,7 +1120,10 @@ function generateRandomLocator(){
 
 function handleER(){
   if(!state.locator) state.locator = generateRandomLocator();
-  state.segments.forEach(s => s.status = "HK");
+  state.segments.forEach(s => {
+    s.status = "HK";
+    s.tktCode = "*1A/E*";
+  });
   state.finalized = true;
   state.hasPending = false;
   renderPNR();
@@ -1135,9 +1141,10 @@ function handleIR(){
     }
   }
   const currOffice = state.officeId || "DACVS31XW";
-  const agCode = state.agentCode || "BP/AS";
+  // IR shows the stored PNR with AA/SU action code (matches real Amadeus screenshot 3)
+  const agCode = state.agentCode || "MM/GS";
   const dt = state.dateStamp || "17JUN26/1324Z";
-  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>\n${currOffice}/4455BP/${dt.split('/')[0]}`);
+  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>`);
 }
 
 function handleRT(cmd){
@@ -1588,31 +1595,71 @@ function handlePricing(cmd){
 
   const hasPax = state.passengers && state.passengers.length > 0;
 
-  // If FXR command OR no passenger names entered yet (matching Screenshot 2 & 3)
-  if(upper.startsWith("FXR") || !hasPax){
+  // FXR = price as booked, FXB = best buy (rebook to N class) — both use segment/fare-basis table
+  // Only FXP (multi-pax table) uses the passenger table format
+  if(upper.startsWith("FXR") || upper.startsWith("FXB") || !hasPax){
     const segs = (state.segments && state.segments.length) ? state.segments : [
       { al:"QR", fn:"639", cls:"N", date:"20MAY", dep:"DAC", arr:"DOH", depT:"0410", arrT:"0620" },
       { al:"QR", fn:"828", cls:"N", date:"20MAY", dep:"DOH", arr:"BKK", depT:"0725", arrT:"1820" }
     ];
 
+    // Build passenger name line for FXB (01  SURNAME/FIRST*)
+    const paxLine = (hasPax && upper.startsWith('FXB'))
+      ? (() => {
+          const p = state.passengers[0];
+          const raw = (p.label || 'PAX/ONE').split(' ')[0]; // "HOSSAIN/KAMALA MS" → "HOSSAIN/KAMALA"
+          const parts = raw.split('/');
+          const surname = parts[0] || 'PAX';
+          const first = (parts[1] || 'ONE').split(' ')[0];
+          return `01  ${surname}/${first}*`;
+        })()
+      : `01 P1`;
+
+    // FXB: "NO REBOOKING REQUIRED..." / FXR: "PRICED AS BOOKED"
+    const statusLine = upper.startsWith('FXB')
+      ? `NO REBOOKING REQUIRED FOR LOWEST AVAILABLE FARE`
+      : (isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`);
+
+    // Ticket deadline — use a date ~30 days from first flight date, or fixed
+    const tkDte = (() => {
+      const seg0 = segs[0];
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      // Try to parse flight date
+      const raw = seg0.date || '20MAY';
+      const mIdx = months.findIndex(m => raw.toUpperCase().includes(m));
+      const day = parseInt(raw) || 20;
+      const yr = new Date().getFullYear();
+      // deadline = flight date - 1 day
+      const deadlineDay = day > 1 ? day - 1 : day;
+      const mName = mIdx >= 0 ? months[mIdx] : 'MAY';
+      const yrShort = String(yr).slice(-2);
+      return `${deadlineDay}${mName}${yrShort}`;
+    })();
+
     const rows = [
       upper,
       ``,
-      `01 P1`,
-      isRebook ? `ITINERARY REBOOKED` : `PRICED AS BOOKED`,
-      `LAST TKT DTE 19MAY26/23:59 LT in POS - SEE ADV PURCHASE`,
-      `------------------------------------------------------------`,
-      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`
+      paxLine,
+      statusLine,
+      `LAST TKT DTE ${tkDte}/23:59 LT in POS - SEE ADV PURCHASE`,
+      `----------------------------------------------------------------`,
+      `      AL  FLGT  BK T DATE   TIME  FARE BASIS       NVB   NVA      BG`
     ];
 
     segs.forEach((s, idx) => {
       if(idx === 0) {
         rows.push(` ${s.dep}`);
       }
-      const prefix = (idx > 0) ? `X${s.dep}`.padEnd(5, ' ') : '     ';
-      const bkCol = isRebook ? `${s.cls} *${s.cls}` : `${s.cls}  ${s.cls}`;
+      // Prefix: first segment is origin city, connecting segments are "XDOH" style
+      const prefix = (idx === 0) ? `   ${s.dep}`.padEnd(5,' ') : `X${s.dep}`.padEnd(5, ' ');
+      // BK T columns: For FXB "N N" (rebooked), for FXR "N  N" (as booked)
+      const bkCol = upper.startsWith('FXB') ? `${s.cls} ${s.cls}` : `${s.cls}  ${s.cls}`;
+      // Fare basis: e.g. NJR4R1RI (N=class, JR4R1RI=fare type code)
       const fBasis = `${s.cls}JR4R1RI`.padEnd(16, ' ');
-      rows.push(`${prefix} ${s.al.padEnd(3, ' ')}  ${s.fn.padStart(4, ' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis} ${s.date}       25`);
+      // Baggage: 20kg for connecting short-haul, 25kg for main long-haul, 15 for intra-region
+      const bgKg = (idx === 0 && segs.length > 1) ? '15' : '25';
+      // NVB empty, NVA = flight date
+      rows.push(`${prefix} ${s.al.padEnd(3,' ')}  ${s.fn.padStart(4,' ')}  ${bkCol} ${s.date}  ${s.depT}  ${fBasis}       ${s.date}    ${bgKg}`);
       if(idx === segs.length - 1){
         rows.push(` ${s.arr}`);
       }
@@ -1733,6 +1780,92 @@ function handleTQT(cmd){
 
   printLines(rows, '');
   showToast(`Ticket Quote Table (TQT) displayed`);
+}
+
+// ---------- TQ T — Full TST Detail Display (matches original Amadeus screenshot) ----------
+function handleTQDetail(){
+  if(!state.hasTST){
+    printLines(['NO TST EXISTS — USE FXB OR FXP TO CREATE TST FIRST'], 'err');
+    return;
+  }
+
+  const segs = state.segments || [];
+  const pax  = state.passengers || [];
+  const currOffice = state.officeId || OFFICE_ID;
+  const al   = segs.length ? segs[0].al : 'QR';
+
+  // TST header line: TST00001  DACVS33Q4 MM/07MAR I 0 LD 19MAY26 2359 OD DACBKK
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}${months[now.getMonth()]}`;
+  const yrShort = String(now.getFullYear()).slice(-2);
+  // Last date = flight date (approx)
+  const flightDate = segs.length ? segs[0].date : '20MAY';
+  const flightMon  = months.findIndex(m => flightDate.toUpperCase().includes(m));
+  const flightDay  = parseInt(flightDate) || 20;
+  const ldDay = flightDay > 1 ? flightDay - 1 : flightDay;
+  const ldMon = flightMon >= 0 ? months[flightMon] : 'MAY';
+  const ldDate = `${ldDay}${ldMon}${yrShort}`;
+  const origCity = segs.length ? segs[0].dep : 'DAC';
+  const destCity = segs.length ? segs[segs.length-1].arr : 'BKK';
+  const agCode = state.agentCode || 'MM';
+  const agInitials = agCode.split('/')[0] || 'MM';
+
+  const rows = [];
+  rows.push(`TST00001    ${currOffice} ${agInitials}/${dateStr} I 0 LD ${ldDate} 2359 OD ${origCity}${destCity}`);
+  rows.push(`T-E`);
+  rows.push(`FXB`);
+
+  // Passenger line(s)
+  pax.forEach((p, i) => {
+    rows.push(`    ${i+1}.${p.label || 'HOSSAIN/KAMALA MS'}`);
+  });
+  if(!pax.length) rows.push(`    1.PASSENGER/NAME MS`);
+
+  // Segment lines
+  // Format: " 1  DAC QR  639 N 20MAY 0410  OK NJR4R1RI          20MAY    25K"
+  // Connecting:" 2 X DOH QR  828 N 20MAY 0725  OK NJR4R1RI          20MAY    25K"
+  segs.forEach((s, idx) => {
+    const connX = idx > 0 ? 'X' : ' ';
+    const dep   = s.dep.padEnd(3,' ');
+    const alPad = s.al.padEnd(2,' ');
+    const fn    = s.fn.padStart(4,' ');
+    const cls   = s.cls || 'N';
+    const fBasis= `${cls}JR4R1RI`.padEnd(16,' ');
+    const nva   = s.date || '20MAY';
+    const bg    = (idx === 0 && segs.length > 1) ? '25K' : '25K';
+    rows.push(` ${idx+1} ${connX} ${dep} ${alPad} ${fn} ${cls} ${s.date||'20MAY'} ${s.depT||'0410'}  OK ${fBasis} ${nva}    ${bg}`);
+  });
+
+  // Fare block
+  const fareUSD  = 1068.00;
+  const fareBDT  = 131055;
+  const taxTotal = 14698;
+  const grandTotal = fareBDT + taxTotal;
+  const bsr = 122.71;
+
+  rows.push(``);
+  rows.push(`FARE F USD   ${fareUSD.toFixed(2)}`);
+  rows.push(`EQUIV  BDT     ${fareBDT}`);
+  rows.push(`TX001 X BDT    500-BDAE TX002 X BDT    444-E5GO TX003 X BDT    2500-OWGA`);
+  rows.push(`TX004 X BDT   1228-P7DE TX005 X BDT   1228-P8SE TX006 X BDT   4000-UTTR`);
+  rows.push(`TX007 X BDT   2022-G4AF TX008 X BDT    184-PZAV TX009 X BDT   2022-QAAP`);
+  rows.push(`TX010 X BDT    337-R9SE TX011 X BDT    136-E7AD TX012 X BDT     97-G8AE`);
+  rows.push(`TOTAL  BDT   ${grandTotal}    BSR ${bsr}`);
+  rows.push(`GRAND TOTAL BDT    ${grandTotal}`);
+
+  // NUC routing line
+  const viaStr = segs.length > 1 ? ` ${al} X/${segs[0].arr} ${segs[1]?.al||al}` : ` ${al}`;
+  rows.push(`${origCity}${viaStr} ${destCity}${fareUSD.toFixed(2)}NUC${fareUSD.toFixed(2)}END ROE1.00`);
+  rows.push(``);
+
+  // FE / FV lines
+  const feNum = pax.length + segs.length + 11;
+  rows.push(`${feNum}.FE /C1-2 NON END/CHNG PENALTIES AS PER RULE`);
+  rows.push(`${feNum+1}.FV ${al}`);
+
+  printLines(rows, '');
+  showToast(`TST Detail displayed (TQ T)`);
 }
 
 // ---------- FPINV / FP ... â€” Form of Payment (Screenshot 4) ----------
@@ -2137,6 +2270,9 @@ function runCommand(raw){
   // FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3)
   if(/^FX[RBPX]/i.test(clean)) return handlePricing(upper);
 
+  // TQ T - Full TST Detail display (matches original Amadeus "tq t" command)
+  if(/^TQ\s+T$/i.test(upper)) return handleTQDetail();
+
   // TQT — Ticket Quote Table / Display TST (Screenshot 3)
   if(/^TQT(\/T\d+)?$/i.test(upper)) return handleTQT(upper);
 
@@ -2216,6 +2352,127 @@ document.getElementById('actionSearchInput').addEventListener('keydown', (e)=>{
       e.target.value = '';
     }
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMMAND HISTORY MODAL — matches original Amadeus "Command History" dialog
+// ─────────────────────────────────────────────────────────────────────────────
+let _selectedHistoryCmd = null;
+
+window.openCommandHistory = function() {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  const list    = document.getElementById('cmdHistoryList');
+  if (!overlay || !list) return;
+
+  // Rebuild list (newest at bottom like Amadeus)
+  list.innerHTML = '';
+  _selectedHistoryCmd = null;
+
+  if (!commandHistory.length) {
+    list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">No commands yet</li>';
+  } else {
+    commandHistory.forEach((cmd, i) => {
+      const li = document.createElement('li');
+      li.textContent = cmd;
+      li.dataset.cmd = cmd;
+      li.style.cssText = 'padding:6px 14px; font-size:14px; cursor:pointer; border-bottom:1px solid #f0f0f0; font-family:monospace;';
+
+      // Highlight last item (like Amadeus golden highlight)
+      if (i === commandHistory.length - 1) {
+        li.style.background = '#f5a623';
+        li.style.color = '#000';
+        _selectedHistoryCmd = cmd;
+      }
+
+      li.addEventListener('click', () => {
+        // Deselect all
+        list.querySelectorAll('li').forEach(el => {
+          el.style.background = '';
+          el.style.color = '';
+        });
+        // Select clicked
+        li.style.background = '#f5a623';
+        li.style.color = '#000';
+        _selectedHistoryCmd = cmd;
+      });
+
+      li.addEventListener('mouseover', () => {
+        if (li.style.background !== 'rgb(245, 166, 35)') {
+          li.style.background = '#e8f0fe';
+        }
+      });
+      li.addEventListener('mouseout', () => {
+        if (_selectedHistoryCmd !== cmd) {
+          li.style.background = '';
+          li.style.color = '';
+        }
+      });
+
+      list.appendChild(li);
+    });
+    // Scroll to bottom (latest command)
+    list.scrollTop = list.scrollHeight;
+  }
+
+  overlay.style.display = 'flex';
+};
+
+window.closeCommandHistory = function() {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  if (overlay) overlay.style.display = 'none';
+  _selectedHistoryCmd = null;
+};
+
+window.clearCommandHistory = function() {
+  commandHistory = [];
+  historyPos = -1;
+  const list = document.getElementById('cmdHistoryList');
+  if (list) list.innerHTML = '<li style="padding:10px 14px; color:#888; font-size:13px;">History cleared</li>';
+  _selectedHistoryCmd = null;
+  showToast('Command history cleared');
+};
+
+window.historyAction = function(action) {
+  const cmd = _selectedHistoryCmd;
+  if (!cmd && action !== 'flow') {
+    showToast('Please select a command first', 'warn');
+    return;
+  }
+
+  if (action === 'send') {
+    // Execute the command
+    closeCommandHistory();
+    setTimeout(() => runCommand(cmd), 100);
+
+  } else if (action === 'copy') {
+    // Copy to clipboard
+    navigator.clipboard.writeText(cmd).then(() => {
+      showToast(`Copied: ${cmd}`);
+    }).catch(() => {
+      // Fallback
+      const inp = document.getElementById('cmdInput');
+      if (inp) { inp.value = cmd; inp.focus(); inp.select(); }
+      showToast(`Copied to input: ${cmd}`);
+    });
+    closeCommandHistory();
+
+  } else if (action === 'edit') {
+    // Put in input for editing
+    closeCommandHistory();
+    setTimeout(() => {
+      const inp = document.getElementById('cmdInput');
+      if (inp) { inp.value = cmd; inp.focus(); inp.setSelectionRange(cmd.length, cmd.length); }
+    }, 100);
+
+  } else if (action === 'flow') {
+    showToast('Smart Flow creation — coming soon');
+  }
+};
+
+// Close modal when clicking outside (backdrop click)
+document.addEventListener('click', (e) => {
+  const overlay = document.getElementById('cmdHistoryOverlay');
+  if (overlay && e.target === overlay) closeCommandHistory();
 });
 
 // Initialize on page load: display the exact lesson PNR with clickable classes!
