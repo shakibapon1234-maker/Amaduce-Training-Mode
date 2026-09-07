@@ -1782,6 +1782,92 @@ function handleTQT(cmd){
   showToast(`Ticket Quote Table (TQT) displayed`);
 }
 
+// ---------- TQ T — Full TST Detail Display (matches original Amadeus screenshot) ----------
+function handleTQDetail(){
+  if(!state.hasTST){
+    printLines(['NO TST EXISTS — USE FXB OR FXP TO CREATE TST FIRST'], 'err');
+    return;
+  }
+
+  const segs = state.segments || [];
+  const pax  = state.passengers || [];
+  const currOffice = state.officeId || OFFICE_ID;
+  const al   = segs.length ? segs[0].al : 'QR';
+
+  // TST header line: TST00001  DACVS33Q4 MM/07MAR I 0 LD 19MAY26 2359 OD DACBKK
+  const now = new Date();
+  const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const dateStr = `${String(now.getDate()).padStart(2,'0')}${months[now.getMonth()]}`;
+  const yrShort = String(now.getFullYear()).slice(-2);
+  // Last date = flight date (approx)
+  const flightDate = segs.length ? segs[0].date : '20MAY';
+  const flightMon  = months.findIndex(m => flightDate.toUpperCase().includes(m));
+  const flightDay  = parseInt(flightDate) || 20;
+  const ldDay = flightDay > 1 ? flightDay - 1 : flightDay;
+  const ldMon = flightMon >= 0 ? months[flightMon] : 'MAY';
+  const ldDate = `${ldDay}${ldMon}${yrShort}`;
+  const origCity = segs.length ? segs[0].dep : 'DAC';
+  const destCity = segs.length ? segs[segs.length-1].arr : 'BKK';
+  const agCode = state.agentCode || 'MM';
+  const agInitials = agCode.split('/')[0] || 'MM';
+
+  const rows = [];
+  rows.push(`TST00001    ${currOffice} ${agInitials}/${dateStr} I 0 LD ${ldDate} 2359 OD ${origCity}${destCity}`);
+  rows.push(`T-E`);
+  rows.push(`FXB`);
+
+  // Passenger line(s)
+  pax.forEach((p, i) => {
+    rows.push(`    ${i+1}.${p.label || 'HOSSAIN/KAMALA MS'}`);
+  });
+  if(!pax.length) rows.push(`    1.PASSENGER/NAME MS`);
+
+  // Segment lines
+  // Format: " 1  DAC QR  639 N 20MAY 0410  OK NJR4R1RI          20MAY    25K"
+  // Connecting:" 2 X DOH QR  828 N 20MAY 0725  OK NJR4R1RI          20MAY    25K"
+  segs.forEach((s, idx) => {
+    const connX = idx > 0 ? 'X' : ' ';
+    const dep   = s.dep.padEnd(3,' ');
+    const alPad = s.al.padEnd(2,' ');
+    const fn    = s.fn.padStart(4,' ');
+    const cls   = s.cls || 'N';
+    const fBasis= `${cls}JR4R1RI`.padEnd(16,' ');
+    const nva   = s.date || '20MAY';
+    const bg    = (idx === 0 && segs.length > 1) ? '25K' : '25K';
+    rows.push(` ${idx+1} ${connX} ${dep} ${alPad} ${fn} ${cls} ${s.date||'20MAY'} ${s.depT||'0410'}  OK ${fBasis} ${nva}    ${bg}`);
+  });
+
+  // Fare block
+  const fareUSD  = 1068.00;
+  const fareBDT  = 131055;
+  const taxTotal = 14698;
+  const grandTotal = fareBDT + taxTotal;
+  const bsr = 122.71;
+
+  rows.push(``);
+  rows.push(`FARE F USD   ${fareUSD.toFixed(2)}`);
+  rows.push(`EQUIV  BDT     ${fareBDT}`);
+  rows.push(`TX001 X BDT    500-BDAE TX002 X BDT    444-E5GO TX003 X BDT    2500-OWGA`);
+  rows.push(`TX004 X BDT   1228-P7DE TX005 X BDT   1228-P8SE TX006 X BDT   4000-UTTR`);
+  rows.push(`TX007 X BDT   2022-G4AF TX008 X BDT    184-PZAV TX009 X BDT   2022-QAAP`);
+  rows.push(`TX010 X BDT    337-R9SE TX011 X BDT    136-E7AD TX012 X BDT     97-G8AE`);
+  rows.push(`TOTAL  BDT   ${grandTotal}    BSR ${bsr}`);
+  rows.push(`GRAND TOTAL BDT    ${grandTotal}`);
+
+  // NUC routing line
+  const viaStr = segs.length > 1 ? ` ${al} X/${segs[0].arr} ${segs[1]?.al||al}` : ` ${al}`;
+  rows.push(`${origCity}${viaStr} ${destCity}${fareUSD.toFixed(2)}NUC${fareUSD.toFixed(2)}END ROE1.00`);
+  rows.push(``);
+
+  // FE / FV lines
+  const feNum = pax.length + segs.length + 11;
+  rows.push(`${feNum}.FE /C1-2 NON END/CHNG PENALTIES AS PER RULE`);
+  rows.push(`${feNum+1}.FV ${al}`);
+
+  printLines(rows, '');
+  showToast(`TST Detail displayed (TQ T)`);
+}
+
 // ---------- FPINV / FP ... â€” Form of Payment (Screenshot 4) ----------
 function handleFP(cmd){
   const fopVal = cmd.replace(/^FP\s*/i, '').trim().toUpperCase() || 'INV';
@@ -2183,6 +2269,9 @@ function runCommand(raw){
 
   // FXR / FXB / FXP / FXX — Pricing & TST Creation (Screenshot 2 & 3)
   if(/^FX[RBPX]/i.test(clean)) return handlePricing(upper);
+
+  // TQ T - Full TST Detail display (matches original Amadeus "tq t" command)
+  if(/^TQ\s+T$/i.test(upper)) return handleTQDetail();
 
   // TQT — Ticket Quote Table / Display TST (Screenshot 3)
   if(/^TQT(\/T\d+)?$/i.test(upper)) return handleTQT(upper);
