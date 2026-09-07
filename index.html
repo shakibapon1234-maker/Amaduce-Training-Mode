@@ -32,31 +32,106 @@
   <div style="cursor:pointer;" onclick="this.parentElement.style.display='none'">✕</div>
 </div>
 
-<!-- 3. Sub Action Bar -->
+<!-- 3. Sub Action Bar (Matches Screenshot 2 & 3) -->
 <div class="action-bar">
-  <button class="new-cmd-btn" id="newCmdBtn" onclick="resetSimulator()" title="Open new command page / Reset Simulator">
-    <span>&gt;_</span> New command page ▾
+  <div class="amad-start-wrap">
+    <button class="start-btn" id="startBtn" onclick="toggleStartMenu(event)" title="Open Start Menu">
+      <span>Start</span> <span id="startArrow">▾</span>
+    </button>
+    <!-- Start Dropdown Menu (Matches Screenshot 2) -->
+    <div class="start-dropdown-menu" id="startDropdownMenu">
+      <div class="start-menu-item" onclick="switchToTab('cmd')">
+        <span class="start-menu-icon">&gt;_</span>
+        <span class="start-menu-label">Command page</span>
+        <span class="start-menu-shortcut">Ctrl+Alt+Shift+C</span>
+      </div>
+      <div class="start-menu-item has-submenu" id="bookingMenuItem" onmouseenter="showBookingSubmenu(true)" onmouseleave="showBookingSubmenu(false)">
+        <span class="start-menu-icon">📋</span>
+        <span class="start-menu-label">Booking</span>
+        <span class="start-menu-arrow">›</span>
+        <!-- Booking Submenu -->
+        <div class="booking-submenu" id="bookingSubmenu">
+          <div class="start-menu-item" onclick="switchToTab('air')">
+            <span class="start-menu-icon">✈️</span>
+            <span class="start-menu-label">Air</span>
+            <span class="start-menu-shortcut">Ctrl+Alt+Shift+A</span>
+          </div>
+          <div class="start-menu-item" onclick="alert('Amadeus Hotel Booking module')">
+            <span class="start-menu-icon">🏨</span>
+            <span class="start-menu-label">Hotel</span>
+            <span class="start-menu-shortcut">Ctrl+Alt+Shift+H</span>
+          </div>
+          <div class="start-menu-item" onclick="alert('Amadeus Car Rental module')">
+            <span class="start-menu-icon">🚗</span>
+            <span class="start-menu-label">Car</span>
+            <span class="start-menu-shortcut">Ctrl+Alt+Shift+K</span>
+          </div>
+          <div class="start-menu-item" onclick="switchToTab('air'); openQuickPaxModal();">
+            <span class="start-menu-icon">👤</span>
+            <span class="start-menu-label">Passengers</span>
+            <span class="start-menu-shortcut">Ctrl+Alt+Shift+B</span>
+          </div>
+          <div class="start-menu-item" onclick="alert('Amadeus Group Booking module')">
+            <span class="start-menu-icon">👥</span>
+            <span class="start-menu-label">Group booking</span>
+          </div>
+        </div>
+      </div>
+      <div class="start-menu-item" onclick="alert('Amadeus Profiles module')">
+        <span class="start-menu-icon">🪪</span>
+        <span class="start-menu-label">Profiles</span>
+        <span class="start-menu-arrow">›</span>
+      </div>
+      <div class="start-menu-item" onclick="window.print()">
+        <span class="start-menu-icon">🖨️</span>
+        <span class="start-menu-label">Print</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="icon-nav-btn" onclick="alert('Amadeus Apps Catalogue')" title="Apps">
+    <span>Apps ▾</span>
   </button>
+  <button class="icon-nav-btn" onclick="switchToTab('cmd')" title="Command page">
+    <span>&gt;_</span>
+  </button>
+  <button class="icon-nav-btn primary-air-btn" onclick="switchToTab('air')" title="Air Search (Graphical Mode)">
+    <span>✈️</span>
+  </button>
+  <button class="icon-nav-btn" onclick="openNewTab()" title="New tab">
+    <span>+</span>
+  </button>
+  <button class="icon-nav-btn" onclick="switchToTab('cmd')" title="Home">
+    <span>🏠</span>
+  </button>
+
   <div class="action-input-wrap">
     <input type="text" id="actionSearchInput" placeholder='Enter an action (example: "Retrieve" or "Launch Smart Flow")'>
   </div>
   <div class="action-bar-pnr-info">
     <span id="topPnrStatus" class="muted"></span>
-    <span>Office ID: <b>DACVS3334</b></span>
+    <span>Office ID: <b id="mainOfficeId">DACVS33GT</b></span>
   </div>
 </div>
 
-<!-- 4. Command Page Header / Tab -->
+<!-- 4. Command Page Header / Tabs (Matches Screenshot 2 & 3) -->
 <div class="page-header-tabs">
-  <div class="page-tab-active" id="cmdPageTab">
-    <span style="font-size:14px; opacity:0.85;">📄</span>
-    <span id="tabTitleText">Command page</span>
-    <span class="page-tab-close" title="Reset Session" onclick="resetSimulator()">✕</span>
+  <div class="tabs-container">
+    <div class="page-tab page-tab-active" id="tabCmd" onclick="switchToTab('cmd')">
+      <span class="tab-icon">📄</span>
+      <span id="tabTitleText">Command page 1</span>
+      <span class="page-tab-close" title="Reset Session" onclick="resetSimulator(); event.stopPropagation();">✕</span>
+    </div>
+    <div class="page-tab" id="tabAir" onclick="switchToTab('air')">
+      <span class="tab-icon">✈️</span>
+      <span id="airTabTitle">Bookin...</span>
+      <span class="page-tab-close" title="Close Air Search" onclick="closeAirTab(event)">✕</span>
+    </div>
   </div>
   <div class="page-tools">
     <button type="button" class="tab-action-btn" onclick="runSmartCmd('IG')" title="Ignore Current Transaction (IG)">Ignore (IG)</button>
     <button type="button" class="tab-action-btn primary" onclick="runSmartCmd('ET')" title="Save &amp; End Transaction (ET)">Save (ET)</button>
-    <span>Owned by <b>DACVS3334</b></span>
+    <span>Owned by <b>DACVS33GT</b></span>
     <span class="tool-icon" id="historyBtn" title="Command History" onclick="openCommandHistory()" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;" aria-label="Command History">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -65,13 +140,13 @@
       </svg>
     </span>
     <span class="tool-icon" title="Split Screen Horizontal" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="16" rx="2"/>
         <line x1="3" y1="12" x2="21" y2="12"/>
       </svg>
     </span>
     <span class="tool-icon" title="Split Screen Vertical" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="16" rx="2"/>
         <line x1="12" y1="4" x2="12" y2="20"/>
       </svg>
@@ -79,10 +154,248 @@
   </div>
 </div>
 
-<!-- 5. Main Area (Terminal + Right Sidebar + Seat Map Overlay) -->
+<!-- 5. Main Area (Terminal + Graphical Air Search + Right Sidebar) -->
 <div class="main-container">
 
-  <!-- Main Terminal Page -->
+  <!-- Graphical Air Search View (Matches Screenshot 3) -->
+  <div class="air-search-view" id="airSearchView" style="display:none;">
+    <div class="gui-sub-bar">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:13px;">📄</span>
+        <span style="font-weight:600; color:#005a9c;">Booking file 3</span>
+        <span style="color:#64748b;">Owned by DACVS33GT</span>
+      </div>
+      <div class="gui-sub-tools">
+        <button type="button" class="tab-action-btn" onclick="runSmartCmd('IG')">Ignore (IG)</button>
+        <button type="button" class="tab-action-btn primary" onclick="runSmartCmd('ER')">Save (ER)</button>
+      </div>
+    </div>
+
+    <div class="gui-search-content">
+      <div class="gui-main-header">
+        <h1 class="gui-title">Your air search</h1>
+        <div class="gui-search-by-wrap">
+          <span>Search by</span>
+          <select class="gui-select-fares">
+            <option>All Fares</option>
+            <option>Published Fares</option>
+            <option>Corporate Fares</option>
+          </select>
+          <span class="mandatory-hint">*Mandatory</span>
+        </div>
+      </div>
+
+      <!-- Search Type Radios -->
+      <div class="gui-radios-row">
+        <label class="gui-radio-label">
+          <input type="radio" name="guiSearchType" value="bound" checked onchange="toggleReturnBound(true)">
+          <span>Shop by bound</span>
+        </label>
+        <label class="gui-radio-label">
+          <input type="radio" name="guiSearchType" value="standard" onchange="toggleReturnBound(true)">
+          <span>Standard search</span>
+        </label>
+        <label class="gui-radio-label">
+          <input type="radio" name="guiSearchType" value="flexible" onchange="toggleReturnBound(false)">
+          <span>Flexible Dates</span>
+        </label>
+      </div>
+
+      <!-- Accordion: Itinerary -->
+      <div class="gui-section-card">
+        <div class="gui-section-header">
+          <div class="gui-section-title">Itinerary</div>
+          <span class="gui-toggle-icon">▲</span>
+        </div>
+        <div class="gui-section-body">
+          <!-- Bound 1 (Outbound) -->
+          <div class="gui-bound-row">
+            <div class="gui-field-group" style="position:relative;">
+              <label>From*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiFrom1" value="Dhaka (DAC)" placeholder="City or Airport" autocomplete="off">
+                <span class="input-tag">A</span>
+              </div>
+              <div class="ac-dropdown" id="acFrom1"></div>
+            </div>
+            <div class="gui-field-group" style="position:relative;">
+              <label>To*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiTo1" value="Bangkok (BKK)" placeholder="City or Airport" autocomplete="off">
+                <span class="input-tag">A</span>
+              </div>
+              <div class="ac-dropdown" id="acTo1"></div>
+            </div>
+            <div class="gui-field-group" style="max-width:140px;">
+              <label>Date*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiDate1" value="26JAN26" placeholder="DDMMMYY">
+                <span class="input-tag">📅</span>
+              </div>
+            </div>
+            <div class="gui-field-group" style="max-width:160px;">
+              <label>Time</label>
+              <select id="guiTimeType1" class="gui-sub-select">
+                <option>Departure after</option>
+                <option>Arrival by</option>
+              </select>
+            </div>
+            <div class="gui-field-group" style="max-width:110px;">
+              <label>&nbsp;</label>
+              <input type="text" id="guiTime1" value="00:00" placeholder="00:00">
+            </div>
+            <div class="gui-delete-col" title="Clear bound" onclick="document.getElementById('guiFrom1').value=''; document.getElementById('guiTo1').value='';">
+              <span>🗑</span>
+            </div>
+          </div>
+
+          <!-- Sub-options Row -->
+          <div class="gui-bound-sub-row">
+            <div class="gui-field-group" style="max-width:200px;">
+              <label>Cabin</label>
+              <select id="guiCabin">
+                <option value="lowest">By price (lowest)</option>
+                <option value="economy">Economy</option>
+                <option value="premium">Premium Economy</option>
+                <option value="business">Business</option>
+                <option value="first">First</option>
+              </select>
+            </div>
+            <div class="gui-field-group" style="flex:1;">
+              <label>Airlines and alliances <span class="info-icon">ⓘ</span></label>
+              <input type="text" id="guiAirlines" placeholder="Add or exclude airlines and alliances (e.g. TG, SV, QR)">
+            </div>
+            <div class="gui-field-group check-group">
+              <label class="gui-chk-label">
+                <input type="checkbox" id="guiDirectOnly">
+                <span>No connections <span class="info-icon">ⓘ</span></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Bound 2 (Inbound / Return) -->
+          <div class="gui-bound-row return-bound" id="guiBound2">
+            <div class="gui-field-group" style="position:relative;">
+              <label>From*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiFrom2" value="Bangkok (BKK)" placeholder="City or Airport" autocomplete="off">
+                <span class="input-tag">A</span>
+              </div>
+              <div class="ac-dropdown" id="acFrom2"></div>
+            </div>
+            <div class="gui-field-group" style="position:relative;">
+              <label>To*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiTo2" value="Dhaka (DAC)" placeholder="City or Airport" autocomplete="off">
+                <span class="input-tag">A</span>
+              </div>
+              <div class="ac-dropdown" id="acTo2"></div>
+            </div>
+            <div class="gui-field-group" style="max-width:140px;">
+              <label>Date*</label>
+              <div class="gui-input-icon-wrap">
+                <input type="text" id="guiDate2" value="30JAN26" placeholder="DDMMMYY">
+                <span class="input-tag">📅</span>
+              </div>
+            </div>
+            <div class="gui-field-group" style="max-width:160px;">
+              <label>Time</label>
+              <select id="guiTimeType2" class="gui-sub-select">
+                <option>Departure after</option>
+                <option>Arrival by</option>
+              </select>
+            </div>
+            <div class="gui-field-group" style="max-width:110px;">
+              <label>&nbsp;</label>
+              <input type="text" id="guiTime2" value="00:00" placeholder="00:00">
+            </div>
+            <div class="gui-delete-col" title="Remove return flight" onclick="toggleReturnBound(false)">
+              <span>🗑</span>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <button type="button" class="btn-add-bound" id="btnAddBound" style="display:none;" onclick="toggleReturnBound(true)">
+              <span>+ Add bound</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion: Passengers -->
+      <div class="gui-section-card">
+        <div class="gui-section-header">
+          <div class="gui-section-title">Passengers</div>
+          <span class="gui-toggle-icon">▲</span>
+        </div>
+        <div class="gui-section-body">
+          <div style="font-size:11px; font-weight:600; color:#334155; margin-bottom:6px;">
+            Passenger Type Codes (PTCs)*
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="gui-chk-label">
+              <input type="checkbox">
+              <span>IT PTC</span>
+            </label>
+          </div>
+
+          <div class="pax-counters-grid">
+            <div class="pax-counter-pill">
+              <button type="button" class="pax-btn" onclick="adjustPax('adt', -1)">−</button>
+              <span class="pax-count-val" id="guiPaxAdt">1</span>
+              <button type="button" class="pax-btn" onclick="adjustPax('adt', 1)">+</button>
+              <span class="pax-code-label">ADT</span>
+            </div>
+
+            <div class="pax-counter-pill">
+              <button type="button" class="pax-btn" onclick="adjustPax('chd', -1)">−</button>
+              <span class="pax-count-val" id="guiPaxChd">0</span>
+              <button type="button" class="pax-btn" onclick="adjustPax('chd', 1)">+</button>
+              <span class="pax-code-label">CHD</span>
+            </div>
+
+            <div class="pax-counter-pill">
+              <button type="button" class="pax-btn" onclick="adjustPax('inf', -1)">−</button>
+              <span class="pax-count-val" id="guiPaxInf">0</span>
+              <button type="button" class="pax-btn" onclick="adjustPax('inf', 1)">+</button>
+              <span class="pax-code-label">INF</span>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <span class="gui-add-pax-link" onclick="openQuickPaxModal()">+ Add passengers</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion: Fares and fees -->
+      <div class="gui-section-card">
+        <div class="gui-section-header">
+          <div class="gui-section-title">Fares and fees</div>
+          <span class="gui-toggle-icon">▲</span>
+        </div>
+        <div class="gui-section-body">
+          <div class="fares-pill-row">
+            <span class="fare-filter-pill active">Public</span>
+            <span class="fare-filter-pill active">Negotiated</span>
+            <span class="fare-filter-pill active">BDT</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Big Search Button -->
+      <div class="gui-search-action-wrap">
+        <button type="button" class="btn-primary-search" onclick="handleGuiSearch()">
+          <span>🔍 Search</span>
+        </button>
+      </div>
+
+      <!-- Graphical Search Results Container -->
+      <div id="airSearchResults" class="air-search-results-container" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Main Terminal Page (Command page) -->
   <div class="terminal-view">
     <!-- Smart Keys Bar (Matches Amadeus Selling Platform Connect) -->
     <div class="smart-keys-bar">
@@ -492,5 +805,6 @@
   <script src="js/airports.js"></script>
   <script src="js/flights.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/airSearch.js"></script>
 </body>
 </html>
