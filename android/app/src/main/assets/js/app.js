@@ -172,18 +172,35 @@ const seatTooltip = document.getElementById('seatTooltip');
 
 function esc(s){ return (s+"").replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
+let latestCommandPromptEl = null;
+
 function printRaw(html){
   const d = document.createElement('div');
   d.className = 'out';
   d.innerHTML = html;
   term.appendChild(d);
-  term.scrollTop = term.scrollHeight;
 }
+
 function printLines(lines, cls){
   printRaw(lines.map(l => `<div class="line ${cls||''}">${l}</div>`).join(''));
 }
+
 function printPromptEcho(cmd){
-  printRaw(`<div class="line prompt-line"><span class="chevron">&gt;</span> ${esc(cmd)}</div>`);
+  const d = document.createElement('div');
+  d.className = 'line prompt-line';
+  d.innerHTML = `<span class="chevron">&gt;</span> ${esc(cmd)}`;
+  term.appendChild(d);
+  latestCommandPromptEl = d;
+}
+
+function scrollToLatestCommand(){
+  if(!latestCommandPromptEl || !term) return;
+  requestAnimationFrame(() => {
+    if(latestCommandPromptEl && term){
+      // Snap latest command prompt cleanly to the top of the visible terminal viewport
+      term.scrollTop = Math.max(0, latestCommandPromptEl.offsetTop);
+    }
+  });
 }
 
 // Render PNR exactly matching Screenshot 1 with clickable booking class links
@@ -882,6 +899,8 @@ function resetSimulator(){
   lastANRoute = null;
   if(typeof resetFareShop === 'function') resetFareShop();
   term.innerHTML = '';
+  latestCommandPromptEl = null;
+  term.scrollTop = 0;
   updateTopPnrInfo();
   mountInput();
   showToast("Simulator reset — ready for new command");
@@ -2767,6 +2786,8 @@ function mountInput(){
       input.focus();
     }
   });
+
+  scrollToLatestCommand();
 }
 
 // Action search bar on top
