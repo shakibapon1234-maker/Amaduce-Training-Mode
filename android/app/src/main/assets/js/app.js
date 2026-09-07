@@ -106,7 +106,9 @@ function createEmptyState() {
 }
 
 // Current Session State - Starts completely clean & fresh upon login/refresh!
-let state = createEmptyState();
+var state = createEmptyState();
+if(typeof window !== 'undefined') window.state = state;
+if(typeof global !== 'undefined') global.state = state;
 let activeSegIdx = 0;
 let activePaxCode = "P1"; // currently assigning for this passenger
 
@@ -223,6 +225,19 @@ function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
   // Format: depT arrTClean   [arrDate ]E 0 [eq] M
   const afterTimes = `   ${arrDateStr} E 0 ${eq} M`;
 
+  // Air India (matches Screenshot 3: 1*DACDEL, 2100 2320 10FEB E 0 32A, SEE RTSVC)
+  if(seg.al === 'AI'){
+    const fnStr = (String(seg.fn).length >= 4) ? `AI${seg.fn}` : `AI ${seg.fn}`;
+    const fnDisplay = `<span class="al">${fnStr}</span>`.padEnd(8, ' ');
+    const dayStr = seg.day || '1*';
+    const arrDateDisplay = (seg.arrT && seg.arrT.includes('+1')) ? getNextDayDate(dateStr) : dateStr;
+    lines.push(
+      `${sNum}  ${fnDisplay} ${classLink} ${dateStr} ${dayStr}${seg.dep}${seg.arr} ${stCount}    ${timeStr}   ${arrDateDisplay} E 0 ${eq}`
+    );
+    lines.push(`    SEE RTSVC`);
+    return lines;
+  }
+
   // Standard clean Amadeus output for airlines like TG, MH, OD, BG, AK, BS, TK, EK
   if(['TG', 'MH', 'OD', 'BG', 'AK', 'BS', 'TK', 'EK'].includes(seg.al)){
     lines.push(
@@ -269,6 +284,9 @@ function renderPNR(header){
   if(header) {
     rows.push(header);
   } else if(isBuilding) {
+    if(state.mscHeader){
+      rows.push(`--- MSC ---`);
+    }
     const currOffice = state.officeId || OFFICE_ID;
     rows.push(`RP/${currOffice}/`);
     // RF line appears right after RP/ in building mode
@@ -1967,8 +1985,39 @@ function handlePricing(cmd){
   const destCity = segs[segs.length - 1].arr;
   const date0 = segs[0].date || '25SEP';
   const isTG = (segs[0].al === 'TG');
+  const isAI = (segs[0].al === 'AI');
 
-  if (isTG) {
+  if (isAI) {
+    // Exact Air India calculation matching YouTube Screenshot 4
+    const aiRows = [
+      upper,
+      ``,
+      paxLine,
+      statusLine,
+      `LAST TKT DTE 10FEB25 - DATE OF ORIGIN`,
+      `------------------------------------------------------------`,
+      `       AL FLGT   BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`,
+      ` DAC`,
+      `XDEL AI   238 L  L 10FEB 2100     LL2YXSDC         10FEB10FEB 1P`,
+      ` LON AI   111 L  L 11FEB 0730     LL2YXSDC         11FEB11FEB 1P`,
+      `XDEL AI   112 G  G 25FEB 1330     GL2YXSDC         25FEB25FEB 1P`,
+      ` DAC AI  2181 G  G 26FEB 0645     GL2YXSDC         26FEB26FEB 1P`,
+      ``,
+      `USD   216.00     10FEB25DAC AI X/DEL AI LON75.50AI X/DEL AI`,
+      `BDT    25916     DAC140.50NUC216.00END ROE1.00`,
+      `BDT      500-BD  XT BDT 912-YR BDT 435-E5 BDT 3000-OW BDT`,
+      `BDT    47992-YQ  1200-P7 BDT 1200-P8 BDT 6000-UT BDT 13389`,
+      `BDT    34005-XT  -GB BDT 7869-UB`,
+      `BDT   108413`,
+      `RATE USED 1USD=119.98BDT`
+    ];
+    state.tstRecords = [
+      { tstNum: 1, pCode: '.1', name: (hasPax ? state.passengers[0].label : 'P1'), fare: 25916, tax: 82497, total: 108413, ptc: 'ADT', segs: `1-${segs.length}` }
+    ];
+    printLines(aiRows, '');
+    showToast(`✓ Quoted (${upper}) — Lowest available fare (BDT 108,413)`);
+    return;
+  } else if (isTG) {
     // Exact Thai Airways calculation from YouTube tutorial
     rows.push(`USD    256.00     ${date0}26DAC TG BKK128.00TG DAC128.00NUC`);
     rows.push(`BDT     31414     256.00END ROE1.00`);
@@ -2563,7 +2612,107 @@ function runCommand(raw){
   // XE — Delete SSR / DOCS / OSI entry (XE10 or XEMOML or XESRDOCS/P1)
   if(/^XE/i.test(upper)) return handleXE(upper);
 
+  // FQN — Fare Quote Notes / Rules Display (Screenshot 5: FQN1-1//PE, FQN1-1, etc.)
+  // Strips accidental backticks like FQN1-1`//PE -> FQN1-1//PE
+  const fqnClean = clean.replace(/[`']/g, '');
+  if(/^FQN/i.test(fqnClean)) return handleFQN(upper.replace(/[`']/g, ''), fqnClean);
+
+  // FQF — Fare Families Details Display (e.g. FQF1, FQF2, FQF)
+  if(/^FQF/i.test(clean)) return handleFQF(upper, clean);
+
   printLines([`FORMAT - command not recognised. Try: FXDDAC/D10FEBLHR/D25FEBDAC · FSDACBKK20NOV · FXS1 · FXZ1 · FXR · FXB · RT · HE/MEAL · ER · TQT · TTP`], 'err');
+}
+
+// ---------- FQN — Fare Rules / Penalty Display (Matches Screenshot 5) ----------
+function handleFQN(cmd, clean){
+  // Check if PE (Penalties) category requested: FQN1-1//PE, FQN1-1`//PE, FQN1-1/PE, FQN1//PE, FQN//PE
+  const isPE = /PE/i.test(clean) || /PENAL/i.test(clean);
+  const seg0 = (state.segments && state.segments[0]) ? state.segments[0] : null;
+  const al = seg0 ? seg0.al : 'AI';
+  const basis = (seg0 && seg0.fareBasis) ? seg0.fareBasis.replace('+', '') : 'LL2YXSDC';
+  const depCity = seg0 ? seg0.dep : 'DAC';
+  const arrCity = (state.segments && state.segments.length > 1) ? state.segments[1].arr : (seg0 ? seg0.arr : 'LON');
+  const destGroup = (arrCity === 'LHR' || arrCity === 'LON') ? 'DACLON' : `${depCity}${arrCity}`;
+  const bkCls = seg0 ? seg0.cls : 'L';
+  const famName = (al === 'TG') ? 'ECOSV1' : 'ECOVALU';
+
+  if(isPE || clean.includes('//') || clean.includes('/')){
+    // Exact match for YouTube Screenshot 5: red PE badge, CHANGES, CHARGE USD 120.00 FOR REISSUE
+    const peBadge = `<span style="background:#dc2626; color:#fff; font-weight:bold; padding:0 2px;">PE</span>`;
+    const rows = [
+      ` 1 - PSGR P1 ADT                                   RULES DISPLAY`,
+      ` FARE COMPONENT  1     ADT ${destGroup} ${al}   ${basis}  PU 1 S`,
+      ` FCL: ${basis}   TRF:    4 RULE: BDGD BK:  ${bkCls}`,
+      ` PTC: ADT-ADULT                FTC: XEX-REGULAR EXCURSION`,
+      ` FARE FAMILY              : ${famName}`,
+      ` ${peBadge}.PENALTIES`,
+      ` FROM/TO EUROPE FOR ${basis} TYPE FARES`,
+      ``,
+      `  CHANGES`,
+      ``,
+      `    CHARGE USD 120.00 FOR REISSUE.`,
+      `       NOTE -`,
+      `          CHANGES NOTE`,
+      `          ...TILL 4 HRS CHARGE USD 120 FOR REISSUE.`,
+      `    -------------------------------------------------------`,
+      `    A CHANGE IS A DATE/FLIGHT/ROUTING/BOOKING CODE`,
+      `    CHANGE.`,
+      `    -------------------------------------------------------`
+    ];
+    printLines(rows, '');
+    showToast(`✓ Fare Rules Display: ${basis} (PE.PENALTIES)`);
+    return;
+  }
+
+  // General FQN category menu
+  const rows = [
+    ` 1 - PSGR P1 ADT                                   RULES DISPLAY`,
+    ` FARE COMPONENT  1     ADT ${destGroup} ${al}   ${basis}  PU 1 S`,
+    ` FCL: ${basis}   TRF:    4 RULE: BDGD BK:  ${bkCls}`,
+    ` PTC: ADT-ADULT                FTC: XEX-REGULAR EXCURSION`,
+    ` FARE FAMILY              : ${famName}`,
+    ``,
+    ` SELECT CATEGORY BY ENTERING FQN1-1//[CATEGORY]`,
+    `   AP - ADVANCE PURCHASE`,
+    `   MN - MINIMUM STAY`,
+    `   MX - MAXIMUM STAY`,
+    `   PE - PENALTIES / CHANGES / CANCELLATIONS`,
+    `   CD - CHILDREN DISCOUNTS`,
+    `   SO - STOPOVERS`,
+    `   SR - SALES RESTRICTIONS`,
+    `   FL - FLIGHT APPLICATION`
+  ];
+  printLines(rows, '');
+  showToast(`Fare Rules categories displayed — Enter FQN1-1//PE to view penalties`);
+}
+
+// ---------- FQF — Fare Families Details Display ----------
+function handleFQF(cmd, clean){
+  const seg0 = (state.segments && state.segments[0]) ? state.segments[0] : null;
+  const al = seg0 ? seg0.al : 'AI';
+  const alName = (al === 'AI') ? 'AIR INDIA (AI)' : (al === 'TG' ? 'THAI AIRWAYS (TG)' : `${al} AIRLINES`);
+  const famName = (al === 'TG') ? 'ECOSV1 (FC1)' : 'ECOVALU (FC1)';
+
+  const rows = [
+    `FARE FAMILY DISPLAY: ${famName}`,
+    `  CARRIER: ${alName}`,
+    `  CABIN: ECONOMY`,
+    `  BOOKING CODES: L, G, U, T, W, V`,
+    ``,
+    `SERVICES INCLUDED:`,
+    `  CHECKED BAGGAGE: 1 PIECE UP TO 23 KG`,
+    `  CABIN BAGGAGE: 1 PIECE UP TO 7 KG`,
+    `  MEAL / SNACK: INCLUDED (COMPLIMENTARY)`,
+    `  STANDARD SEAT: FREE AT CHECK-IN`,
+    `  MILES ACCRUAL: 50% MILES`,
+    ``,
+    `CHANGE & CANCELLATION CONDITIONS:`,
+    `  CHANGES: PERMITTED BEFORE DEPARTURE - CHARGE USD 120.00`,
+    `  CANCELLATION: NON-REFUNDABLE`,
+    `  NO SHOW: CHARGE USD 150.00`
+  ];
+  printLines(rows, '');
+  showToast(`✓ Fare Family details displayed (${famName})`);
 }
 
 function mountInput(){
