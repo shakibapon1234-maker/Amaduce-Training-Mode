@@ -95,15 +95,139 @@ const CURATED_DACLHR = {
   ]
 };
 
+// ---------- Curated DAC-JFK round-trip (matches original app FXD/FXZ screenshots) ----------
+const CURATED_DACJFK = {
+  headerGroups: 26,
+  headerRecs: 50,
+  headerMin: 90961,
+  headerMax: 705393,
+  usdRate: 83.20,
+  groups: [
+    {
+      groupNum: 1,
+      recommendations: [
+        {
+          recNum: 1, total: 90961, fare: 73632, tax: 17329, fareBasis: 'NAATRBD8', ptc: 'ADT', bg: '2P',
+          segs: [
+            { al:'CX', opAl:'KA', fn:'5111', cls:'N', date:'20DEC', dep:'DAC', arr:'HKG', termArr:'1', depT:'2310', arrT:'0445+1', eq:'333', dur:'' },
+            { al:'CX', fn:'830', cls:'N', date:'21DEC', dep:'HKG', arr:'JFK', termDep:'1', termArr:'8', depT:'0935', arrT:'1210', eq:'77W', elapsed:'2400' },
+            { al:'CX', fn:'841', cls:'N', date:'10JAN', dep:'JFK', arr:'HKG', termDep:'8', termArr:'1', depT:'0900', arrT:'1410+1', eq:'77W', dur:'' },
+            { al:'CX', opAl:'KA', fn:'5110', cls:'N', date:'11JAN', dep:'HKG', arr:'DAC', termDep:'1', depT:'1930', arrT:'2200', eq:'333', elapsed:'2600' }
+          ],
+          lastTkt: '20DEC18',
+          ticketNote: 'TICKETS ARE NON REFUNDABLE AFTER DEPARTURE'
+        }
+      ]
+    },
+    {
+      groupNum: 2,
+      recommendations: [
+        {
+          recNum: 1, total: 93547, fare: 78708, tax: 14839, fareBasis: 'QJBDL4RE+', ptc: 'ADT', bg: '2P', cat35: true,
+          segs: [
+            { al:'CX', opAl:'KA', fn:'5111', cls:'Q', date:'20DEC', dep:'DAC', arr:'HKG', termArr:'1', depT:'2310', arrT:'0445+1', eq:'333', dur:'' },
+            { al:'CX', fn:'830', cls:'Q', date:'21DEC', dep:'HKG', arr:'JFK', termDep:'1', termArr:'8', depT:'0935', arrT:'1210', eq:'77W', elapsed:'2400' },
+            { al:'CX', fn:'841', cls:'Q', date:'10JAN', dep:'JFK', arr:'HKG', termDep:'8', termArr:'1', depT:'0900', arrT:'1410+1', eq:'77W', dur:'' },
+            { al:'CX', opAl:'KA', fn:'5110', cls:'Q', date:'11JAN', dep:'HKG', arr:'DAC', termDep:'1', depT:'1930', arrT:'2200', eq:'333', elapsed:'2600' }
+          ],
+          lastTkt: '20DEC18',
+          ticketNote: 'TICKETS ARE NON REFUNDABLE AFTER DEPARTURE'
+        }
+      ]
+    }
+  ]
+};
+
 // ---------- Helpers ----------
-function fsFormatSegLine(seg, idx){
-  const num = idx === 0 ? String(idx + 1).padStart(2, ' ') : '  ';
-  const alFn = `${seg.al} ${seg.fn}`.padEnd(7, ' ');
-  const termD = seg.termDep ? ` ${seg.termDep}` : '';
-  const termA = seg.termArr ? ` ${seg.termArr}` : '';
-  const route = `${seg.dep}${termD} ${seg.arr}${termA}`.padEnd(12, ' ');
-  const dur = seg.dur ? seg.dur.padStart(6, ' ') : '      ';
-  return `${num} ${alFn} ${seg.cls} ${seg.date} ${route} ${seg.depT} ${seg.arrT.padEnd(6, ' ')} E0/${seg.eq}${dur ? '  ' + dur : ''}`;
+const FS_CITY = { JFK:'NYC', EWR:'NYC', LGA:'NYC', LHR:'LON', LGW:'LON', STN:'LON', CDG:'PAR', ORY:'PAR', NRT:'TYO', HND:'TYO' };
+
+function fsCityCode(apt){
+  return FS_CITY[apt] || apt;
+}
+
+function fsNormDur(dur){
+  if(!dur) return '';
+  const s = String(dur).trim();
+  if(s.includes(':')){
+    const [h, m] = s.split(':');
+    return String(parseInt(h, 10) || 0).padStart(2, '0') + String(parseInt(m, 10) || 0).padStart(2, '0');
+  }
+  const digits = s.replace(/\D/g, '');
+  if(!digits) return '';
+  return digits.padStart(4, '0').slice(-4);
+}
+
+function fsAddDur(a, b){
+  const toMin = d => {
+    const n = fsNormDur(d);
+    if(!n) return 0;
+    return parseInt(n.slice(0, 2), 10) * 60 + parseInt(n.slice(2, 4), 10);
+  };
+  const mins = toMin(a) + toMin(b);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return String(h).padStart(2, '0') + String(m).padStart(2, '0');
+}
+
+function fsBoundStartIndexes(segs, dest){
+  const starts = [0];
+  if(!segs || segs.length < 2) return starts;
+  for(let i = 1; i < segs.length; i++){
+    if(segs[i].dep === dest || segs[i - 1].arr === dest){
+      starts.push(i);
+      break;
+    }
+  }
+  return starts;
+}
+
+function fsElapsedByBound(segs, dest){
+  const starts = fsBoundStartIndexes(segs, dest);
+  const elapsed = new Array(segs.length).fill('');
+  const ends = starts.map((s, i) => (i < starts.length - 1 ? starts[i + 1] - 1 : segs.length - 1));
+  starts.forEach((start, bi) => {
+    const end = ends[bi];
+    if(segs[end] && segs[end].elapsed){
+      elapsed[end] = fsNormDur(segs[end].elapsed);
+      return;
+    }
+    let sum = '0000';
+    let any = false;
+    for(let i = start; i <= end; i++){
+      if(segs[i].dur){
+        sum = fsAddDur(sum, segs[i].dur);
+        any = true;
+      }
+    }
+    if(any) elapsed[end] = sum;
+  });
+  return { starts, elapsed };
+}
+
+function fsCarrierFlight(seg){
+  if(seg.opAl && seg.opAl !== seg.al){
+    return `${seg.opAl}:${seg.al}${seg.fn}`;
+  }
+  return `${seg.al} ${seg.fn}`;
+}
+
+function fsRoutePart(seg){
+  const bits = [seg.dep];
+  if(seg.termDep) bits.push(seg.termDep);
+  bits.push(seg.arr);
+  if(seg.termArr) bits.push(seg.termArr);
+  return bits.join(' ');
+}
+
+function fsFormatSegLine(seg, idx, boundStarts, elapsedAt){
+  const isBoundStart = boundStarts && boundStarts.indexOf(idx) !== -1;
+  const num = isBoundStart ? String(boundStarts.indexOf(idx) + 1) : ' ';
+  const glued = !!(seg.opAl && seg.opAl !== seg.al);
+  const alFn = fsCarrierFlight(seg).padEnd(glued ? 9 : 7, ' ');
+  const prefix = glued && isBoundStart ? `${num}${alFn}` : `${num} ${alFn}`;
+  const route = fsRoutePart(seg).padEnd(12, ' ');
+  const elapsed = elapsedAt && elapsedAt[idx] ? ` ${elapsedAt[idx]}` : '';
+  return `${prefix} ${seg.cls} ${seg.date} ${route} ${seg.depT} ${String(seg.arrT).padEnd(6, ' ')} E0/${seg.eq}${elapsed}`;
 }
 
 function fsFareBasis(al, cls){
@@ -172,28 +296,42 @@ function fsBuildDynamicGroups(orig, dest, outDate, retDate){
   return groups;
 }
 
+function fsJourneyDest(rec){
+  if(fareShopSession && fareShopSession.query && fareShopSession.query.dest){
+    return fareShopSession.query.dest;
+  }
+  return rec.segs.length ? rec.segs[Math.max(0, Math.floor(rec.segs.length / 2) - 1)].arr : '';
+}
+
+function fsFormatSegLines(rec){
+  const dest = fsJourneyDest(rec);
+  const { starts, elapsed } = fsElapsedByBound(rec.segs, dest);
+  return rec.segs.map((s, i) => fsFormatSegLine(s, i, starts, elapsed));
+}
+
 function fsRenderRecommendation(rec, groupNum, recIdx, totalInGroup){
   const rows = [];
   rows.push(`---------- RECOMMENDATION ${recIdx + 1} OF ${totalInGroup} IN GROUP ${groupNum} (BDT ${rec.total}) ----------`);
-  rows.push(`  PTC  1 ${rec.ptc}`);
-  rows.push(`  CUR  BDT`);
-  rows.push(`  FARE ${rec.fare}`);
-  rows.push(`  TAX  ${rec.tax}`);
-  rows.push(`  FARE BASIS  ${rec.fareBasis}`);
+  rows.push(`PTC          CUR                 TAX      FARE BASIS`);
+  const curAmt = `1 BDT ${rec.total}`;
+  const cat35 = rec.cat35 ? '  CAT35' : '';
+  rows.push(`${'1 ' + rec.ptc}`.padEnd(12, ' ') + curAmt.padEnd(20, ' ') + String(rec.tax).padEnd(10, ' ') + rec.fareBasis + cat35);
+  rows.push(`${'TOTAL'}`.padEnd(12, ' ') + curAmt.padEnd(20, ' ') + String(rec.tax));
   rows.push(``);
-  rec.segs.forEach((s, i) => rows.push(fsFormatSegLine(s, i)));
+  fsFormatSegLines(rec).forEach(line => rows.push(line));
   rows.push(``);
-  rows.push(`>> FXS${rec.recNum} TO SELECT`);
-  rows.push(`>> FXZ${rec.recNum} TO BOOK`);
-  rows.push(`>> FXU${rec.recNum} TO BOOK AND CREATE TST`);
-  rows.push(`>> FXY${rec.recNum} TO HAVE UPSELL RECOMMENDATION`);
+  const n = rec.recNum;
+  rows.push(`>> FXS${n} TO SELECT    >> FXZ${n} TO BOOK    >> FXU${n} TO BOOK AND CREATE TST`);
   rows.push(``);
-  rows.push(`  1 TICKETS ARE NON-REFUNDABLE`);
-  rows.push(`  1 LAST TKT DTE ${rec.lastTkt || '10FEB25'} - DATE OF ORIGIN`);
-  rows.push(`  FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
-  rec.fareFamilies.forEach(ff => {
-    rows.push(`  ${ff.range} ${ff.name} (${ff.fc})`);
-  });
+  const note = rec.ticketNote || 'TICKETS ARE NON REFUNDABLE AFTER DEPARTURE';
+  rows.push(`1 ${note}`);
+  rows.push(`1 LAST TKT DTE ${rec.lastTkt || '10FEB25'} - DATE OF ORIGIN`);
+  if(rec.fareFamilies && rec.fareFamilies.length){
+    rows.push(`FARE FAMILIES:    (ENTER FQFn FOR DETAILS, FXY FOR UPSELL)`);
+    rec.fareFamilies.forEach(ff => {
+      rows.push(`${ff.range} ${ff.name} (${ff.fc})`);
+    });
+  }
   return rows;
 }
 
@@ -206,32 +344,136 @@ function fsGetAllPrices(groups){
   return { min: min === Infinity ? 0 : min, max };
 }
 
-function fsStoreSession(groups, query){
+function fsStoreSession(groups, query, extra){
   const prices = fsGetAllPrices(groups);
   const totalRecs = groups.reduce((s, g) => s + g.recommendations.length, 0);
-  fareShopSession = { groups, query, prices, totalRecs, selectedRec: null, activeGroup: 0 };
+  fareShopSession = { groups, query, prices, totalRecs, selectedRec: null, activeGroup: 0, usdRate: extra && extra.usdRate };
+}
+
+function fsKnownCity(code){
+  return typeof AIRPORTS !== 'undefined' && AIRPORTS[code];
+}
+
+function fsFixCity(code){
+  const c = (code || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if(!c) return '';
+  if(fsKnownCity(c)) return c;
+  const collapsed = c.replace(/(.)\1+/g, '$1');
+  if(fsKnownCity(collapsed)) return collapsed;
+  if(c.length === 4){
+    for(let i = 0; i < 4; i++){
+      const t = c.slice(0, i) + c.slice(i + 1);
+      if(fsKnownCity(t)) return t;
+    }
+  }
+  if(c.length > 3 && fsKnownCity(c.slice(0, 3))) return c.slice(0, 3);
+  return collapsed.length === 3 ? collapsed : c.slice(0, 3);
+}
+
+function fsParseFXD(clean){
+  const body = clean.replace(/^FXD/i, '');
+  let m = body.match(/^([A-Z]{3,5})\/D(\d{1,2}[A-Z]{3})([A-Z]{3,5})\/D(\d{1,2}[A-Z]{3})([A-Z]{3,5})$/i);
+  if(m){
+    return {
+      origRaw: m[1].toUpperCase(), destRaw: m[3].toUpperCase(), retRaw: m[5].toUpperCase(),
+      orig: fsFixCity(m[1]), dest: fsFixCity(m[3]), retOrig: fsFixCity(m[5]),
+      outDate: m[2].toUpperCase(), retDate: m[4].toUpperCase(), oneWay: false
+    };
+  }
+  m = body.match(/^([A-Z]{3,5})\/D(\d{1,2}[A-Z]{3})([A-Z]{3,5})$/i);
+  if(m){
+    return {
+      origRaw: m[1].toUpperCase(), destRaw: m[3].toUpperCase(),
+      orig: fsFixCity(m[1]), dest: fsFixCity(m[3]),
+      outDate: m[2].toUpperCase(), oneWay: true
+    };
+  }
+  return null;
+}
+
+function fsPrintFXD(groups, orig, dest, headerOverride){
+  fsStoreSession(groups, { orig, dest, type:'FXD' }, headerOverride);
+  const totalGroups = headerOverride ? headerOverride.groups : groups.length;
+  const totalRecs   = headerOverride ? headerOverride.recs   : fareShopSession.totalRecs;
+  const min = headerOverride ? headerOverride.min : fareShopSession.prices.min;
+  const max = headerOverride ? headerOverride.max : fareShopSession.prices.max;
+  const rows = [];
+  rows.push(`${totalGroups} GROUPS AND ${totalRecs} RECOMMENDATIONS RETURNED FROM BDT ${min} TO ${max}`);
+  rows.push(``);
+  groups.forEach((g, gi) => {
+    if(gi > 0) rows.push(``);
+    g.recommendations.forEach((rec, ri) => {
+      rows.push(...fsRenderRecommendation(rec, g.groupNum, ri, g.recommendations.length));
+      if(ri < g.recommendations.length - 1) rows.push(``);
+    });
+  });
+  printLines(rows, '');
+  showToast(`✓ Fare Shop: ${totalGroups} groups, ${totalRecs} recommendations (${orig}-${dest})`);
 }
 
 // ---------- FXD — Fare Driven Search (original app command) ----------
+function fsStampRtDates(groups, dest, outDate, retDate, lastTkt){
+  groups.forEach(g => {
+    g.recommendations.forEach(rec => {
+      rec.lastTkt = lastTkt;
+      const starts = fsBoundStartIndexes(rec.segs, dest);
+      const retStart = starts[1] != null ? starts[1] : rec.segs.length;
+      rec.segs.forEach((s, i) => {
+        if(i === 0) s.date = outDate;
+        else if(i === retStart) s.date = retDate;
+        else {
+          const prev = rec.segs[i - 1];
+          const prevArr = String(prev.arrT || '');
+          s.date = prevArr.includes('+1') ? (typeof getNextDayDate === 'function' ? getNextDayDate(prev.date) : prev.date) : prev.date;
+        }
+      });
+    });
+  });
+}
+
 function handleFXD(cmd, clean){
-  // FXDDAC/D10FEBLHR/D25FEBDAC
-  const m = clean.match(/^FXD([A-Z]{3})\/D(\d{1,2}[A-Z]{3})([A-Z]{3})\/D(\d{1,2}[A-Z]{3})([A-Z]{3})$/i);
-  if(!m){
+  // FXDDAC/D10FEBLHR/D25FEBDAC  |  FXDDAC/D20DECJFK/D10JAN DAC
+  // Also accepts 4-letter typos: JFFK → JFK
+  const parsed = fsParseFXD(clean);
+  if(!parsed){
     printLines([
       'INVALID FORMAT',
       'Examples:',
       '  FXDDAC/D10FEBLHR/D25FEBDAC',
+      '  FXDDAC/D20DECJFK/D10JANDAC',
       '  FXDDAC/D12NOVBKK/D20NOVDAC'
     ], 'err');
     return;
   }
 
-  const orig = m[1], outDate = m[2].toUpperCase(), dest = m[3];
-  const retDate = m[4].toUpperCase(), retOrig = m[5];
+  const orig = parsed.orig, dest = parsed.dest, outDate = parsed.outDate;
+  const retDate = parsed.retDate, retOrig = parsed.retOrig || orig;
+  const corrections = [];
+  if(parsed.origRaw && parsed.origRaw !== orig) corrections.push(`${parsed.origRaw}->${orig}`);
+  if(parsed.destRaw && parsed.destRaw !== dest) corrections.push(`${parsed.destRaw}->${dest}`);
+  if(parsed.retRaw && parsed.retRaw !== retOrig) corrections.push(`${parsed.retRaw}->${retOrig}`);
+  if(corrections.length){
+    printLines([`CITY CODE CORRECTED: ${corrections.join('  ')}`], 'warn');
+  }
+
+  if(parsed.oneWay){
+    const oneWayCmd = `FS${orig}${dest}${outDate}`;
+    return handleFS(oneWayCmd, oneWayCmd);
+  }
 
   let groups;
   let headerOverride = null;
-  if(orig === 'DAC' && dest === 'LHR' && retOrig === 'DAC'){
+  if(orig === 'DAC' && dest === 'JFK' && retOrig === 'DAC'){
+    groups = JSON.parse(JSON.stringify(CURATED_DACJFK.groups));
+    fsStampRtDates(groups, dest, outDate, retDate, outDate === '20DEC' ? '20DEC18' : outDate + '26');
+    headerOverride = {
+      groups: CURATED_DACJFK.headerGroups,
+      recs: CURATED_DACJFK.headerRecs,
+      min: CURATED_DACJFK.headerMin,
+      max: CURATED_DACJFK.headerMax,
+      usdRate: CURATED_DACJFK.usdRate
+    };
+  } else if(orig === 'DAC' && dest === 'LHR' && retOrig === 'DAC'){
     groups = JSON.parse(JSON.stringify(CURATED_DACLHR.groups));
     headerOverride = {
       groups: CURATED_DACLHR.headerGroups,
@@ -247,28 +489,7 @@ function handleFXD(cmd, clean){
     }
   }
 
-  fsStoreSession(groups, { orig, dest, outDate, retDate, retOrig, type:'FXD' });
-
-  const totalGroups = headerOverride ? headerOverride.groups : groups.length;
-  const totalRecs   = headerOverride ? headerOverride.recs   : fareShopSession.totalRecs;
-  const min = headerOverride ? headerOverride.min : fareShopSession.prices.min;
-  const max = headerOverride ? headerOverride.max : fareShopSession.prices.max;
-
-  const rows = [];
-  rows.push(`${totalGroups} GROUPS AND ${totalRecs} RECOMMENDATIONS RETURNED FROM BDT ${min} TO ${max}`);
-  rows.push(``);
-
-  groups.forEach((g, gi) => {
-    if(gi > 0) rows.push(``);
-    rows.push(`GROUP ${g.groupNum}`);
-    g.recommendations.forEach((rec, ri) => {
-      rows.push(...fsRenderRecommendation(rec, g.groupNum, ri, g.recommendations.length));
-      if(ri < g.recommendations.length - 1) rows.push(``);
-    });
-  });
-
-  printLines(rows, '');
-  showToast(`✓ Fare Shop: ${totalGroups} groups, ${totalRecs} recommendations (${orig}-${dest})`);
+  fsPrintFXD(groups, orig, dest, headerOverride);
 }
 
 // ---------- FS — Master Pricer (training lecture command) ----------
@@ -337,7 +558,6 @@ function handleFS(cmd, clean){
 
   groups.forEach((g, gi) => {
     if(gi > 0) rows.push(``);
-    rows.push(`GROUP ${g.groupNum}`);
     g.recommendations.forEach((rec, ri) => {
       rows.push(...fsRenderRecommendation(rec, g.groupNum, ri, g.recommendations.length));
       if(ri < g.recommendations.length - 1) rows.push(``);
@@ -358,6 +578,87 @@ function fsFindRecommendation(recNum){
     if(rec) return { rec, group: g };
   }
   return null;
+}
+
+function fsUsdRate(){
+  return (fareShopSession && fareShopSession.usdRate) || 122.71;
+}
+
+function fsArrCityCol(seg, orig, dest){
+  const isEnd = seg.arr === orig || seg.arr === dest || fsCityCode(seg.arr) === fsCityCode(orig) || fsCityCode(seg.arr) === fsCityCode(dest);
+  const code = fsCityCode(seg.arr);
+  return (isEnd ? ` ${code}` : `X${code}`).padEnd(4, ' ');
+}
+
+function fsTaxBreakdownLines(tax, total){
+  if(tax === 17329){
+    return [
+      `BDT     500BD     XT BDT 3000OW BDT 75E5 BDT 3408G3 BDT`,
+      `BDT    4000UT     1066I5 BDT 480YC BDT 1523US BDT 1523US BDT`,
+      `BDT   12829XT     330XA BDT 583XY BDT 466AY BDT 375XF`,
+      `BDT     ${total}`
+    ];
+  }
+  const bd = Math.min(500, tax);
+  const ow = Math.min(3000, Math.max(0, tax - bd));
+  const ut = Math.min(4000, Math.max(0, tax - bd - ow));
+  const xt = Math.max(0, tax - bd);
+  const rest = Math.max(0, tax - bd - ow - ut);
+  return [
+    `BDT ${String(bd).padStart(7)}BD     XT BDT ${ow}OW BDT`,
+    `BDT ${String(ut).padStart(7)}UT     ${rest ? 'BDT ' + rest + 'XT' : ''}`,
+    `BDT ${String(xt).padStart(7)}XT`,
+    `BDT ${String(total).padStart(7)}`
+  ];
+}
+
+function fsRenderFxzFareMask(rec, createTST){
+  const orig = (fareShopSession && fareShopSession.query && fareShopSession.query.orig) || rec.segs[0].dep;
+  const dest = fsJourneyDest(rec);
+  const origCity = fsCityCode(orig);
+  const destCity = fsCityCode(dest);
+  const al = rec.segs[0].al;
+  const viaSeg = rec.segs.find(s => s.arr !== dest && s.arr !== orig);
+  const via = viaSeg ? viaSeg.arr : '';
+  const rate = fsUsdRate();
+  const usdNum = rec.fare / rate;
+  const usd = usdNum.toFixed(2);
+  const half = (usdNum / 2).toFixed(2);
+  const yy = ((rec.lastTkt || '').match(/(\d{2})$/) || [,'26'])[1];
+  const date0 = rec.segs[0].date || '20DEC';
+  const bg = (rec.bg || '2P').padStart(3, ' ');
+  const fBasis = rec.fareBasis.padEnd(16, ' ');
+  const rows = [
+    createTST ? 'FXU' : 'FXZ',
+    `01 P1`,
+    `SELECTED RECOMMENDATION SUCCESSFULLY BOOKED`,
+    `LAST TKT DTE ${rec.lastTkt || date0 + yy} - DATE OF ORIGIN`,
+    `------------------------------------------------------------`,
+    `       AL FLGT   BK T DATE   TIME  FARE BASIS       NVB   NVA   BG`,
+    ` ${orig}`
+  ];
+  rec.segs.forEach(s => {
+    const city = fsArrCityCol(s, orig, dest);
+    const alPad = s.al.padEnd(2, ' ');
+    const fn = String(s.fn).padStart(5, ' ');
+    const bk = String(s.cls || 'N').padStart(2, ' ');
+    const t = String(s.cls || 'N').padStart(2, ' ');
+    const date = String(s.date || date0).padStart(5, ' ');
+    const time = String(s.depT || '0000').padStart(4, ' ');
+    const nvbNva = `${s.date || date0}${s.date || date0}`.padEnd(10, ' ');
+    rows.push(`${city} ${alPad} ${fn} ${bk} ${t} ${date} ${time}     ${fBasis} ${nvbNva}${bg}`);
+  });
+  rows.push(``);
+  const viaBit = via ? ` X/${via}` : '';
+  rows.push(`USD ${usd.padStart(8)}     ${date0}${yy}${orig} ${al}${viaBit} ${al} ${destCity}${half}${al}${viaBit}`);
+  rows.push(`BDT ${String(rec.fare).padStart(8)}     ${al} ${origCity}${half}NUC${usd}END ROE1.000000`);
+  fsTaxBreakdownLines(rec.tax, rec.total).forEach(l => rows.push(l));
+  rows.push(`RATE USED 1USD=${rate}BDT`);
+  if(createTST){
+    rows.push(``);
+    rows.push(`TST CREATED`);
+  }
+  return rows;
 }
 
 function fsBookRecommendation(rec, createTST){
@@ -400,22 +701,7 @@ function fsBookRecommendation(rec, createTST){
     }];
   }
 
-  const rows = [];
-  rows.push(`RP/${state.officeId || OFFICE_ID}/`);
-  state.segments.forEach((seg, idx) => {
-    const segLines = formatSegmentBuildingLines(seg, idx, state.segments.length, idx + 1);
-    segLines.forEach(l => rows.push(l));
-  });
-
-  if(createTST){
-    rows.push(``);
-    rows.push(`TST CREATED — TOTAL BDT ${rec.total} (FARE ${rec.fare} + TAX ${rec.tax})`);
-    rows.push(`TYPE NM1 TO ADD PASSENGER NAME, THEN ER TO SAVE`);
-  } else {
-    rows.push(``);
-    rows.push(`RECOMMENDATION BOOKED — TYPE NM1 TO ADD PASSENGER`);
-  }
-
+  const rows = fsRenderFxzFareMask(rec, createTST);
   printLines(rows, '');
   updateTopPnrInfo();
   showToast(createTST
@@ -452,11 +738,9 @@ function handleFXAction(cmd, clean){
       `RECOMMENDATION ${recNum} SELECTED — BDT ${rec.total}`,
       ``
     ];
-    rec.segs.forEach((s, i) => rows.push(fsFormatSegLine(s, i)));
+    fsFormatSegLines(rec).forEach(line => rows.push(line));
     rows.push(``);
-    rows.push(`>> FXZ${recNum} TO BOOK`);
-    rows.push(`>> FXU${recNum} TO BOOK AND CREATE TST`);
-    rows.push(`>> FXY${recNum} TO HAVE UPSELL RECOMMENDATION`);
+    rows.push(`>> FXZ${recNum} TO BOOK    >> FXU${recNum} TO BOOK AND CREATE TST`);
     printLines(rows, '');
     showToast(`✓ Recommendation ${recNum} selected — BDT ${rec.total.toLocaleString()}`);
     return;

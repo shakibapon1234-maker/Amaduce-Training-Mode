@@ -82,6 +82,11 @@ FXDDAC/D10FEBLHR/D25FEBDAC
 ```
 *(ঢাকা → লন্ডন → ঢাকা রাউন্ড ট্রিপ — গ্রুপ ও রিকমেন্ডেশন দেখাবে)*
 
+```
+FXDDAC/D20DECJFK/D10JANDAC
+```
+*(ঢাকা → নিউইয়র্ক JFK → ঢাকা — এয়ারপোর্ট কোড ৩ অক্ষর হতে হবে, যেমন JFK না JFFK)*
+
 ### ধাপ ২ — Master Pricer (FS):
 ```
 FSDACBKK20NOV
