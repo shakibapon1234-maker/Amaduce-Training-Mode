@@ -226,10 +226,10 @@ function renderPNR(header){
     const currOffice = state.officeId || OFFICE_ID;
     rows.push(`RP/${currOffice}/`);
   } else {
-    const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR MSC ---`;
+    const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR ---`;
     rows.push(rlrHeader);
     const currOffice = state.officeId || OFFICE_ID;
-    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'BS/GS');
+    const agCode = state.agentCode || (state.locator === 'OGJZJ9' ? 'BP/AS' : 'MM/GS');
     rows.push(`RP/${currOffice}/${currOffice}          ${agCode}   ${state.dateStamp||"13NOV24/1435Z"}   <span class="locator">${state.locator||"J99GZO"}</span>`);
     if(state.headerLine2){
       rows.push(state.headerLine2);
@@ -267,16 +267,19 @@ function renderPNR(header){
       const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum);
       segLines.forEach(l => rows.push(l));
     } else {
-      const segTkt = seg.tktCode || "TK/VB7BHH";
       const day = seg.day || "2*";
       const dateStr = seg.date || "25MAR";
-      const arrDateStr = seg.arrDate || dateStr;
+      // Real Amadeus shows "*1A/E*" for confirmed HK segments after ER/IR
+      // Format: " 2  QR 639 N 20MAY 3 DACDOH HK1    1  0410 0620   *1A/E*"
+      const isHK = (seg.status === 'HK');
+      const countStr = isHK ? seg.count.toString().padStart(4, ' ') : `  ${seg.count}`;
+      const endCode = isHK ? `  *1A/E*` : `  ${seg.tktCode || 'TK/VB7BHH'}`;
 
       rows.push(
         `${segLineNum.toString().padStart(2, ' ')}  ` +
         `<span class="al">${seg.al} ${seg.fn}</span> ` +
         `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
-        `${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${arrDateStr}  E  ${segTkt}`
+        `${seg.status}${countStr}  ${seg.depT} ${seg.arrT}${endCode}`
       );
     }
   });
@@ -1117,7 +1120,10 @@ function generateRandomLocator(){
 
 function handleER(){
   if(!state.locator) state.locator = generateRandomLocator();
-  state.segments.forEach(s => s.status = "HK");
+  state.segments.forEach(s => {
+    s.status = "HK";
+    s.tktCode = "*1A/E*";
+  });
   state.finalized = true;
   state.hasPending = false;
   renderPNR();
@@ -1135,9 +1141,10 @@ function handleIR(){
     }
   }
   const currOffice = state.officeId || "DACVS31XW";
-  const agCode = state.agentCode || "BP/AS";
+  // IR shows the stored PNR with AA/SU action code (matches real Amadeus screenshot 3)
+  const agCode = state.agentCode || "MM/GS";
   const dt = state.dateStamp || "17JUN26/1324Z";
-  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>\n${currOffice}/4455BP/${dt.split('/')[0]}`);
+  renderPNR(`--- RLR ---\nRP/${currOffice}/${currOffice}            ${agCode} ${dt} <span class="locator">${state.locator}</span>`);
 }
 
 function handleRT(cmd){
