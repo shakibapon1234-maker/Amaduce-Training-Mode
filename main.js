@@ -1,65 +1,65 @@
-const { app, BrowserWindow, Menu, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, Menu, shell } = require("electron");
 const path = require("path");
+const fs = require("fs");
 
 let mainWindow;
 
 function createWindow() {
+  const iconPath = path.join(__dirname, "icon.ico");
+  const iconOptions = fs.existsSync(iconPath) ? { icon: iconPath } : {};
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 900,
-    minHeight: 600,
-    title: "Amaduce Training Simulator — Wings Fly Aviation Academy",
-    icon: path.join(__dirname, "icon.ico"),
+    width: 1366,
+    height: 840,
+    minWidth: 960,
+    minHeight: 640,
+    title: "Amaduce Training Simulator - Wings Fly Aviation Academy",
+    ...iconOptions,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      webSecurity: false
     },
-    // Custom titlebar styling
     backgroundColor: "#00437a",
     show: false
   });
 
-  // Load the single-file training simulator
   mainWindow.loadFile("index.html");
 
-  // Show once loaded (prevents white flash)
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+    mainWindow.maximize();
   });
 
-  // Open external links in the system browser, not Electron
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: "deny" };
   });
 
-  // ---- Application Menu ----
   const menuTemplate = [
     {
       label: "Simulator",
       submenu: [
         {
           label: "Reset Session",
-          accelerator: "CmdOrCtrl+R",
-          click: () => {
-            mainWindow.webContents.executeJavaScript("resetSimulator()");
-          }
+          accelerator: "CmdOrCtrl+N",
+          click: () => { mainWindow.webContents.executeJavaScript("resetSimulator()"); }
         },
         {
           label: "Load Lesson PNR (J99GZO)",
           accelerator: "CmdOrCtrl+L",
-          click: () => {
-            mainWindow.webContents.executeJavaScript("loadLessonPNR()");
-          }
+          click: () => { mainWindow.webContents.executeJavaScript("loadLessonPNR()"); }
+        },
+        {
+          label: "Load Thai Airways PNR (OGJZJ9)",
+          accelerator: "CmdOrCtrl+T",
+          click: () => { mainWindow.webContents.executeJavaScript("loadThaiAirwaysPNR()"); }
         },
         { type: "separator" },
         {
           label: "Open Seat Map",
           accelerator: "CmdOrCtrl+M",
-          click: () => {
-            mainWindow.webContents.executeJavaScript("openSeatMap(0)");
-          }
+          click: () => { mainWindow.webContents.executeJavaScript("openSeatMap(0)"); }
         },
         { type: "separator" },
         { role: "quit", label: "Exit" }
@@ -68,8 +68,10 @@ function createWindow() {
     {
       label: "View",
       submenu: [
-        { role: "reload", label: "Reload" },
-        { role: "togglefullscreen", label: "Full Screen (F11)" },
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "togglefullscreen" },
+        { type: "separator" },
         { role: "zoomin" },
         { role: "zoomout" },
         { role: "resetzoom" },
@@ -82,11 +84,34 @@ function createWindow() {
       ]
     },
     {
+      label: "GDS Commands",
+      submenu: [
+        {
+          label: "Price and Rebook (FXR)",
+          click: () => { mainWindow.webContents.executeJavaScript("runCommand('FXR')"); }
+        },
+        {
+          label: "Display PNR (IR)",
+          accelerator: "CmdOrCtrl+I",
+          click: () => { mainWindow.webContents.executeJavaScript("runCommand('IR')"); }
+        },
+        {
+          label: "Save and End (ET)",
+          accelerator: "CmdOrCtrl+S",
+          click: () => { mainWindow.webContents.executeJavaScript("runCommand('ET')"); }
+        },
+        {
+          label: "Issue Ticket (TTP)",
+          click: () => { mainWindow.webContents.executeJavaScript("runCommand('TTP')"); }
+        }
+      ]
+    },
+    {
       label: "Help",
       submenu: [
         {
-          label: "WFA Academy Website",
-          click: () => shell.openExternal("https://www.wingsflyaviation.com")
+          label: "Commands Cheat Sheet on GitHub",
+          click: () => shell.openExternal("https://github.com/shakibapon1234-maker/Amaduce-Training-Mode")
         },
         { type: "separator" },
         {
@@ -96,12 +121,8 @@ function createWindow() {
             dialog.showMessageBox(mainWindow, {
               type: "info",
               title: "About Amaduce Training Simulator",
-              message: "Amaduce Training Simulator v1.0",
-              detail:
-                "Wings Fly Aviation Academy\n" +
-                "Independent training simulation for Amadeus GDS practice.\n\n" +
-                "Not affiliated with Amadeus IT Group.\n" +
-                "No live GDS access."
+              message: "Amaduce GDS Training Simulator v1.0",
+              detail: "Wings Fly Aviation Academy\nProfessional Amadeus GDS training simulation.\n\nNot affiliated with Amadeus IT Group SA.\nNo live GDS access - training environment only."
             });
           }
         }
@@ -112,9 +133,7 @@ function createWindow() {
   const menu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(menu);
 
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
+  mainWindow.on("closed", () => { mainWindow = null; });
 }
 
 app.whenReady().then(createWindow);
