@@ -163,6 +163,46 @@ function printPromptEcho(cmd){
 }
 
 // Render PNR exactly matching Screenshot 1 with clickable booking class links
+// Helper to render authentic Amadeus building segment lines with mandatory advisory lines (Screenshot 1)
+function formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum){
+  const lines = [];
+  const sNum = segLineNum.toString().padStart(2, ' ');
+  const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map for this flight (${seg.al} ${seg.fn})">${seg.cls}</span>`;
+
+  let connCol = '       ';
+  if(totalSegs > 1){
+    connCol = (sIdx === 0) ? '       1  ' : '          ';
+  }
+
+  const eq = seg.eq || '77W';
+  const depT = seg.depT || '0000';
+  const arrT = seg.arrT || '0000';
+  const timeStr = `${depT} ${arrT}`;
+  const timeSpacing = arrT.includes('+') ? '  ' : '   ';
+  const dateStr = seg.date || '12NOV';
+  const dayStr = seg.day || getDayOfWeek(dateStr);
+  const fnPadded = seg.fn.toString().length < 4 ? seg.fn.toString().padStart(3, ' ') : seg.fn.toString();
+
+  // Primary flight segment line (Exact alignment matching Amadeus Screenshot 1)
+  lines.push(
+    `${sNum}  <span class="al">${seg.al} ${fnPadded}</span> ${classLink} ${dateStr} ${dayStr} ${seg.dep}${seg.arr} ${seg.status || 'HK'}${seg.count || 1}${connCol}${timeStr}${timeSpacing}${eq} E 0 M`
+  );
+
+  // Mandatory advisory lines (Matches real Amadeus Screenshot 1 for all airlines)
+  lines.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
+  lines.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
+
+  // Starlink in-flight connectivity line
+  if(['77W', '787', '359'].includes(eq) && (sIdx === 0 || seg.al === 'SQ' || (seg.al === 'QR' && eq === '77W'))){
+    lines.push(`    STARLINK ENABLED`);
+  }
+
+  // Real Amadeus service routing line
+  lines.push(`    SEE RTSVC`);
+
+  return lines;
+}
+
 function renderPNR(header){
   const rows = [];
 
@@ -178,8 +218,13 @@ function renderPNR(header){
     state.hasPending = false; // clear after display
   }
 
+  const isBuilding = !state.locator && !state.finalized;
+
   if(header) {
     rows.push(header);
+  } else if(isBuilding) {
+    const currOffice = state.officeId || OFFICE_ID;
+    rows.push(`RP/${currOffice}/`);
   } else {
     const rlrHeader = state.hasTST ? `--- TST RLR ---` : `--- RLR MSC ---`;
     rows.push(rlrHeader);
@@ -192,35 +237,48 @@ function renderPNR(header){
   }
 
   let idx = 1;
-  // Passenger Lines
-  let paxLine = "";
-  state.passengers.forEach((p, i)=>{
-    const pNum = i + 1;
-    const str = `<span class="name">${pNum}</span>.<span class="name">${esc(p.label)}</span> `;
-    if(i === 0) paxLine += str;
-    else if(i === 1) { paxLine += str; rows.push(paxLine.trim()); paxLine = ""; }
-    else { rows.push(str.trim()); }
-  });
-  if(paxLine) rows.push(paxLine.trim());
-  idx = state.passengers.length + 1;
+  // Passenger Lines (building mode uses space-padded single-digit " 1.NAME" matching Screenshot 1)
+  if(isBuilding){
+    state.passengers.forEach((p, i)=>{
+      const pNum = (i + 1).toString().padStart(2, ' ');
+      rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
+      idx++;
+    });
+  } else {
+    let paxLine = "";
+    state.passengers.forEach((p, i)=>{
+      const pNum = i + 1;
+      const str = `<span class="name">${pNum}</span>.<span class="name">${esc(p.label)}</span> `;
+      if(i === 0) paxLine += str;
+      else if(i === 1) { paxLine += str; rows.push(paxLine.trim()); paxLine = ""; }
+      else { rows.push(str.trim()); }
+    });
+    if(paxLine) rows.push(paxLine.trim());
+    idx = state.passengers.length + 1;
+  }
 
   // Segment Lines with interactive class triggers
+  const totalSegs = state.segments ? state.segments.length : 0;
   state.segments.forEach((seg, sIdx)=>{
     const segLineNum = idx++;
-    const segTkt = seg.tktCode || "TK/VB7BHH";
-    const day = seg.day || "2*";
-    const dateStr = seg.date || "25MAR";
-    const arrDateStr = seg.arrDate || dateStr;
-
-    // Clickable class link
     const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map for this flight (${seg.al} ${seg.fn})">${seg.cls}</span>`;
 
-    rows.push(
-      `${segLineNum.toString().padStart(2, ' ')}  ` +
-      `<span class="al">${seg.al} ${seg.fn}</span> ` +
-      `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
-      `${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${arrDateStr}  E  ${segTkt}`
-    );
+    if(isBuilding){
+      const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, segLineNum);
+      segLines.forEach(l => rows.push(l));
+    } else {
+      const segTkt = seg.tktCode || "TK/VB7BHH";
+      const day = seg.day || "2*";
+      const dateStr = seg.date || "25MAR";
+      const arrDateStr = seg.arrDate || dateStr;
+
+      rows.push(
+        `${segLineNum.toString().padStart(2, ' ')}  ` +
+        `<span class="al">${seg.al} ${seg.fn}</span> ` +
+        `${classLink} ${dateStr} ${day}${seg.dep}${seg.arr} ` +
+        `${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${arrDateStr}  E  ${segTkt}`
+      );
+    }
   });
 
   // AP
@@ -853,14 +911,19 @@ function handleSS(cmd){
   const rows = [];
   rows.push(`RP/${state.officeId || OFFICE_ID}/`);
 
+  // If passengers already exist, display them first
+  if(state.passengers && state.passengers.length){
+    state.passengers.forEach((p, i) => {
+      const pNum = (i + 1).toString().padStart(2, ' ');
+      rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
+    });
+  }
+
+  let lineIdx = (state.passengers ? state.passengers.length : 0) + 1;
+  const totalSegs = state.segments.length;
   state.segments.forEach((seg, idx) => {
-    const sNum = (idx + 1).toString().padStart(2, ' ');
-    const stopCol = (state.segments.length > 1) ? `    ${idx + 1} ` : '      ';
-    rows.push(`${sNum}  <span class="al">${seg.al}  ${seg.fn.padEnd(4, ' ')}</span> ${seg.cls} ${seg.date} ${seg.day} ${seg.dep}${seg.arr} ${seg.status}${seg.count}${stopCol} ${seg.depT} ${seg.arrT}  ${seg.eq} E 0 M`);
-    rows.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
-    rows.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
-    rows.push(`    STARLINK ENABLED`);
-    rows.push(`    SEE RTSVC`);
+    const segLines = formatSegmentBuildingLines(seg, idx, totalSegs, lineIdx++);
+    segLines.forEach(l => rows.push(l));
   });
 
   printLines(rows, '');
@@ -917,22 +980,60 @@ function renderBuildingPNRAfterNM(newPax){
     renderPNR(`RP/${OFFICE_ID}/`);
     return;
   }
-  if(state.segments.length){
+  if(state.segments && state.segments.length){
     const rows = [];
-    rows.push(`RP/${OFFICE_ID}/`);
+    const currOffice = state.officeId || OFFICE_ID;
+    rows.push(`RP/${currOffice}/`);
+
+    // Passenger lines (aligned with space for single digit e.g. " 1.NAME" matching Screenshot 1)
     state.passengers.forEach((p, i) => {
-      rows.push(`<span class="name">${i + 1}.${esc(p.label)}</span>`);
+      const pNum = (i + 1).toString().padStart(2, ' ');
+      rows.push(`<span class="name">${pNum}.${esc(p.label)}</span>`);
     });
+
+    // Flight segment lines with full details and mandatory advisory lines (Screenshot 1)
+    let lineIdx = state.passengers.length + 1;
+    const totalSegs = state.segments.length;
     state.segments.forEach((seg, sIdx) => {
-      const sNum = (state.passengers.length + sIdx + 1).toString().padStart(2, ' ');
-      const classLink = `<span class="seg-class-link" onclick="openSeatMap(${sIdx})" title="Click to view Seat Map (${seg.al} ${seg.fn})">${seg.cls}</span>`;
-      rows.push(`${sNum}  <span class="al">${seg.al} ${seg.fn}</span> ${classLink} ${seg.date} ${seg.day}*${seg.dep}${seg.arr} ${seg.status}${seg.count}  ${seg.depT} ${seg.arrT}  ${seg.date}  E  ${seg.tktCode || '1A'}`);
+      const segLines = formatSegmentBuildingLines(seg, sIdx, totalSegs, lineIdx++);
+      segLines.forEach(l => rows.push(l));
     });
+
+    // Display AP if already present
+    if(state.phone){
+      rows.push(`${lineIdx.toString().padStart(2, ' ')}  AP ${esc(state.phone)}`);
+      lineIdx++;
+    }
+
+    // Display TK if already present
+    if(state.ticketing){
+      rows.push(`${lineIdx.toString().padStart(2, ' ')}  TK ${esc(state.ticketing)}`);
+      lineIdx++;
+    }
+
+    // Display Special SSRs if already present
+    if(state.specialSSRs && state.specialSSRs.length){
+      state.specialSSRs.forEach(s => {
+        rows.push(`${lineIdx.toString().padStart(2, ' ')}  SSR ${s.type} ${s.al} ${s.status} ${s.value}/${s.pax}`);
+        lineIdx++;
+      });
+    }
+
+    // Display SSR DOCS if already present
+    if(state.docsEntries && state.docsEntries.length){
+      state.docsEntries.forEach(d => {
+        const paxSuffix = (state.passengers.length > 1 || d.pax !== 'P1') ? `/${d.pax}` : '';
+        rows.push(`${lineIdx.toString().padStart(2, ' ')}  SSR DOCS ${d.airline} ${d.action} ${d.docType}/${d.country}/${d.docNumber}/${d.nationality}/${d.dob}/${d.gender}/${d.expiry}/${d.surname}/${d.firstName}${paxSuffix}`);
+        lineIdx++;
+      });
+    }
+
     printLines(rows, '');
   } else {
     printLines([`<span class="name">${esc(newPax.nameDisplay)} *</span>`], '');
   }
-  showToast(`âœ“ Passenger added: ${newPax.nameDisplay}`);
+  updateTopPnrInfo();
+  showToast(`✅ Passenger added: ${newPax.nameDisplay}`);
 }
 
 function handleAP(cmd){
@@ -1056,24 +1157,7 @@ function handleRT(cmd){
 
   // Plain RT: Display current active workspace / PNR
   if(state.segments && state.segments.length){
-    if(state.passengers && state.passengers.length){
-      renderPNR();
-    } else {
-      // In-progress itinerary display (matching Screenshot 4)
-      const rows = [];
-      const off = state.officeId || OFFICE_ID;
-      rows.push(`RP/${off}/`);
-      state.segments.forEach((seg, idx) => {
-        const sNum = (idx + 1).toString().padStart(2, ' ');
-        const stopCol = (state.segments.length > 1) ? `    ${idx + 1} ` : '      ';
-        rows.push(`${sNum}  <span class="al">${seg.al}  ${seg.fn.padEnd(4, ' ')}</span> ${seg.cls} ${seg.date} ${seg.day || '3'} ${seg.dep}${seg.arr} ${seg.status || 'HK'}${seg.count || 1}${stopCol} ${seg.depT} ${seg.arrT}   ${seg.eq || '77W'} E 0 M`);
-        rows.push(`    MANDATORY REQUIRED DOCS DOCO DOCA CTCM CTCE`);
-        rows.push(`    PLS ENTER SSR CTCM OR CTCE FOR IROP ALERTS`);
-        rows.push(`    STARLINK ENABLED`);
-        rows.push(`    SEE RTSVC`);
-      });
-      printLines(rows, '');
-    }
+    renderPNR();
     return;
   }
 
